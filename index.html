@@ -146,8 +146,10 @@ body {
 .mc-change { font-size: 11px; margin-top: 3px; font-weight: 500; }
 
 /* ── Summary cards ── */
-.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
-@media (max-width: 720px) { .summary-row { grid-template-columns: 1fr 1fr; } .market-grid { grid-template-columns: repeat(3,1fr); } }
+.summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 1000px) { .summary-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .summary-row { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 720px) { .market-grid { grid-template-columns: repeat(3,1fr); } }
 
 .stat-card {
   background: var(--card2); border: 1px solid var(--border);
@@ -161,7 +163,10 @@ body {
 .stat-card.c-cost::before { background: linear-gradient(180deg,#6366f1,#8b5cf6); }
 .stat-card.c-value::before { background: linear-gradient(180deg,#0ea5e9,#38bdf8); }
 .stat-card.c-pnl::before { background: linear-gradient(180deg,#22c55e,#4ade80); }
+.stat-card.c-realized::before { background: linear-gradient(180deg,#ec4899,#f472b6); }
 .stat-card.c-misc::before { background: linear-gradient(180deg,#f59e0b,#fbbf24); }
+.closed-section { margin-top: 24px; }
+.closed-section .table-wrap { opacity: 0.75; }
 
 .stat-card .lbl {
   font-size: 11px; color: var(--muted); text-transform: uppercase;
@@ -431,6 +436,11 @@ html.light .logo-text .name {
       <div class="val" id="s-pnl">—</div>
       <div class="sub" id="s-pnl-pct">—</div>
     </div>
+    <div class="stat-card c-realized">
+      <div class="lbl">已实现盈亏</div>
+      <div class="val" id="s-realized">—</div>
+      <div class="sub" id="s-realized-sub">历史卖出</div>
+    </div>
     <div class="stat-card c-misc">
       <div class="lbl">持有币种</div>
       <div class="val" id="s-coins">0</div>
@@ -453,11 +463,24 @@ html.light .logo-text .name {
         <tr>
           <th>币种</th><th>净持仓</th><th>平均成本</th>
           <th>当前价格</th><th>当前市值</th>
-          <th>盈亏 (USD)</th><th>盈亏 %</th><th></th>
+          <th>浮动盈亏</th><th>盈亏 %</th><th>已实现</th><th></th>
         </tr>
       </thead>
       <tbody id="holdings-body"></tbody>
     </table>
+  </div>
+
+  <!-- Closed positions -->
+  <div id="closed-section" style="display:none" class="closed-section">
+    <div class="section-header">
+      <div class="section-title">已平仓</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>币种</th><th>已卖出</th><th>平均成本</th><th>已实现盈亏</th></tr></thead>
+        <tbody id="closed-body"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- Transaction history -->
@@ -473,7 +496,7 @@ html.light .logo-text .name {
 ═══════════════════════════════════ -->
 <div class="modal-bg" id="add-modal">
   <div class="modal">
-    <h2>手动添加买入记录</h2>
+    <h2 id="add-modal-title">添加交易记录</h2>
     <div class="field">
       <label>搜索币种</label>
       <div class="search-wrap">
@@ -486,7 +509,7 @@ html.light .logo-text .name {
       <div class="field"><label>日期</label><input type="date" id="f-date"></div>
       <div class="field">
         <label>类型</label>
-        <select id="f-type">
+        <select id="f-type" onchange="onTxTypeChange()">
           <option value="buy">买入</option>
           <option value="sell">卖出</option>
         </select>
@@ -494,7 +517,7 @@ html.light .logo-text .name {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field">
-        <label>买入单价 (USD)</label>
+        <label id="f-price-label">买入单价 (USD)</label>
         <input type="number" id="f-price" placeholder="0.00" step="any" min="0" oninput="calcTotal()">
       </div>
       <div class="field">
@@ -503,7 +526,7 @@ html.light .logo-text .name {
       </div>
     </div>
     <div class="field">
-      <label>总花费 (USD)</label>
+      <label id="f-cost-label">总花费 (USD)</label>
       <input type="number" id="f-cost" placeholder="自动计算，也可手动填入" step="any" min="0" oninput="calcFromCost()">
       <div class="hint" id="calc-hint">填写单价 × 数量后自动计算</div>
     </div>
@@ -754,11 +777,22 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
 // ════════════════════════════════════════
 function getHoldings() {
   const map = {};
-  for (const tx of db.txs) {
-    if (!map[tx.coinId]) map[tx.coinId] = { coinId: tx.coinId, name: tx.name, symbol: tx.symbol, thumb: tx.thumb || '', netQty: 0, totalBuyCost: 0, totalBuyQty: 0, txs: [] };
+  const sorted = [...db.txs].sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1);
+  for (const tx of sorted) {
+    if (!map[tx.coinId]) map[tx.coinId] = {
+      coinId: tx.coinId, name: tx.name, symbol: tx.symbol, thumb: tx.thumb || '',
+      netQty: 0, totalBuyCost: 0, totalBuyQty: 0, realizedPnl: 0, txs: []
+    };
     const h = map[tx.coinId];
     if (tx.type === 'sell') {
+      const avgCost = h.totalBuyQty > 0 ? h.totalBuyCost / h.totalBuyQty : 0;
+      const costBasis = tx.qty * avgCost;
+      const txRealized = tx.cost - costBasis;
+      h.realizedPnl += txRealized;
+      tx._realized = txRealized;
       h.netQty -= tx.qty;
+      h.totalBuyCost = Math.max(0, h.totalBuyCost - costBasis);
+      h.totalBuyQty = Math.max(0, h.totalBuyQty - tx.qty);
     } else {
       h.netQty += tx.qty;
       h.totalBuyCost += tx.cost;
@@ -766,7 +800,7 @@ function getHoldings() {
     }
     h.txs.push(tx);
   }
-  return Object.values(map).filter(h => h.netQty > 0.000000001);
+  return Object.values(map);
 }
 
 // ════════════════════════════════════════
@@ -829,11 +863,13 @@ function fmtQty(n) {
 function esc(s) { return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 function renderAll() {
-  const holdings = getHoldings();
+  const all = getHoldings();
+  const holdings = all.filter(h => h.netQty > 0.000000001);
+  const closed = all.filter(h => h.netQty <= 0.000000001 && h.txs.length > 0);
   renderMarket(holdings);
-  renderSummary(holdings);
-  renderHoldings(holdings);
-  renderTxList(holdings);
+  renderSummary(all, holdings);
+  renderHoldings(holdings, closed);
+  renderTxList(all);
 }
 
 function renderMarket(holdings) {
@@ -893,8 +929,9 @@ function onWlSearch(val) {
   }), 300);
 }
 
-function renderSummary(holdings) {
-  let cost = 0, value = 0;
+function renderSummary(all, holdings) {
+  let cost = 0, value = 0, realized = 0;
+  for (const h of all) realized += h.realizedPnl;
   for (const h of holdings) {
     cost += h.totalBuyCost;
     const p = priceCache[h.coinId];
@@ -913,47 +950,87 @@ function renderSummary(holdings) {
     ppEl.textContent = fmtPct(pnlPct);
     ppEl.className = 'sub ' + (pnl >= 0 ? 'green' : 'red');
   } else { pEl.textContent = '—'; pEl.className = 'val'; ppEl.textContent = '等待价格'; ppEl.className = 'sub'; }
-}
-
-function renderHoldings(holdings) {
-  const empty = document.getElementById('holdings-empty');
-  const table = document.getElementById('holdings-table');
-  const tbody = document.getElementById('holdings-body');
-  if (!holdings.length) { empty.style.display = ''; table.style.display = 'none'; return; }
-  empty.style.display = 'none'; table.style.display = '';
-  tbody.innerHTML = '';
-  for (const h of holdings) {
-    const p = priceCache[h.coinId];
-    const avgCost = h.totalBuyQty ? h.totalBuyCost / h.totalBuyQty : 0;
-    const curPrice = p ? p.usd : null;
-    const value = curPrice ? h.netQty * curPrice : null;
-    const pnl = value != null ? value - (h.netQty * avgCost) : null;
-    const pnlPct = pnl != null && avgCost ? (pnl / (h.netQty * avgCost)) * 100 : null;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><div class="coin-cell">
-        <div class="coin-icon">${(p?.thumb) ? `<img src="${p.thumb}" alt="">` : h.symbol.charAt(0).toUpperCase()}</div>
-        <div><div class="coin-name">${esc(h.name)}</div><div class="coin-tick">${esc(h.symbol.toUpperCase())}</div></div>
-      </div></td>
-      <td class="num">${fmtQty(h.netQty)} <span style="color:var(--muted);font-size:11px">${esc(h.symbol.toUpperCase())}</span></td>
-      <td class="num">${fmt(avgCost, avgCost < 1 ? 5 : 2)}</td>
-      <td class="num">${curPrice == null ? '<span class="loading-price"></span>' : fmt(curPrice, curPrice < 1 ? 5 : 2) + (p?.change24h != null ? `<br><span style="font-size:10px" class="${p.change24h>=0?'green':'red'}">${fmtPct(p.change24h)} 24h</span>` : '')}</td>
-      <td class="num">${value != null ? fmt(value) : '<span class="loading-price"></span>'}</td>
-      <td class="num ${pnl != null ? (pnl >= 0 ? 'green' : 'red') : ''}">${pnl != null ? (pnl >= 0 ? '+' : '-') + fmt(Math.abs(pnl)) : '<span class="loading-price"></span>'}</td>
-      <td>${pnlPct != null ? `<span class="pnl-badge ${pnlPct >= 0 ? 'pos' : 'neg'}">${fmtPct(pnlPct)}</span>` : '<span class="loading-price"></span>'}</td>
-      <td style="white-space:nowrap">
-        <button class="action-btn" onclick="quickAddCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')">+买入</button>
-        <button class="action-btn danger" onclick="deleteCoin('${h.coinId}')" style="margin-left:4px">删除</button>
-      </td>`;
-    tbody.appendChild(tr);
+  const rEl = document.getElementById('s-realized');
+  const rSub = document.getElementById('s-realized-sub');
+  if (realized !== 0) {
+    rEl.textContent = (realized >= 0 ? '+' : '-') + fmt(Math.abs(realized));
+    rEl.className = 'val ' + (realized >= 0 ? 'green' : 'red');
+    rSub.textContent = realized >= 0 ? '已锁定利润' : '已锁定亏损';
+    rSub.className = 'sub ' + (realized >= 0 ? 'green' : 'red');
+  } else {
+    rEl.textContent = '—'; rEl.className = 'val';
+    rSub.textContent = '历史卖出'; rSub.className = 'sub';
   }
 }
 
-function renderTxList(holdings) {
+function renderHoldings(holdings, closed) {
+  const empty = document.getElementById('holdings-empty');
+  const table = document.getElementById('holdings-table');
+  const tbody = document.getElementById('holdings-body');
+  if (!holdings.length) { empty.style.display = ''; table.style.display = 'none'; }
+  else {
+    empty.style.display = 'none'; table.style.display = '';
+    tbody.innerHTML = '';
+    for (const h of holdings) {
+      const p = priceCache[h.coinId];
+      const avgCost = h.totalBuyQty ? h.totalBuyCost / h.totalBuyQty : 0;
+      const curPrice = p ? p.usd : null;
+      const value = curPrice ? h.netQty * curPrice : null;
+      const pnl = value != null ? value - (h.netQty * avgCost) : null;
+      const pnlPct = pnl != null && avgCost ? (pnl / (h.netQty * avgCost)) * 100 : null;
+      const realizedCell = h.realizedPnl !== 0
+        ? `<span class="${h.realizedPnl >= 0 ? 'green' : 'red'}">${h.realizedPnl >= 0 ? '+' : '-'}${fmt(Math.abs(h.realizedPnl))}</span>`
+        : `<span style="color:var(--muted)">—</span>`;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><div class="coin-cell">
+          <div class="coin-icon">${(p?.thumb) ? `<img src="${p.thumb}" alt="">` : h.symbol.charAt(0).toUpperCase()}</div>
+          <div><div class="coin-name">${esc(h.name)}</div><div class="coin-tick">${esc(h.symbol.toUpperCase())}</div></div>
+        </div></td>
+        <td class="num">${fmtQty(h.netQty)} <span style="color:var(--muted);font-size:11px">${esc(h.symbol.toUpperCase())}</span></td>
+        <td class="num">${fmt(avgCost, avgCost < 1 ? 5 : 2)}</td>
+        <td class="num">${curPrice == null ? '<span class="loading-price"></span>' : fmt(curPrice, curPrice < 1 ? 5 : 2) + (p?.change24h != null ? `<br><span style="font-size:10px" class="${p.change24h>=0?'green':'red'}">${fmtPct(p.change24h)} 24h</span>` : '')}</td>
+        <td class="num">${value != null ? fmt(value) : '<span class="loading-price"></span>'}</td>
+        <td class="num ${pnl != null ? (pnl >= 0 ? 'green' : 'red') : ''}">${pnl != null ? (pnl >= 0 ? '+' : '-') + fmt(Math.abs(pnl)) : '<span class="loading-price"></span>'}</td>
+        <td>${pnlPct != null ? `<span class="pnl-badge ${pnlPct >= 0 ? 'pos' : 'neg'}">${fmtPct(pnlPct)}</span>` : '<span class="loading-price"></span>'}</td>
+        <td class="num">${realizedCell}</td>
+        <td style="white-space:nowrap">
+          <button class="action-btn" onclick="quickAddCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')">+买入</button>
+          <button class="action-btn" onclick="quickSellCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')" style="margin-left:4px">−卖出</button>
+          <button class="action-btn danger" onclick="deleteCoin('${h.coinId}')" style="margin-left:4px">删除</button>
+        </td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // Closed positions
+  const closedSec = document.getElementById('closed-section');
+  const closedBody = document.getElementById('closed-body');
+  if (closed.length) {
+    closedSec.style.display = '';
+    closedBody.innerHTML = closed.map(h => {
+      const totalSold = h.txs.filter(t => t.type === 'sell').reduce((s, t) => s + t.qty, 0);
+      return `<tr>
+        <td><div class="coin-cell">
+          <div class="coin-icon" style="opacity:.6">${h.symbol.charAt(0).toUpperCase()}</div>
+          <div><div class="coin-name" style="opacity:.7">${esc(h.name)}</div><div class="coin-tick">${esc(h.symbol.toUpperCase())}</div></div>
+        </div></td>
+        <td class="num" style="opacity:.7">${fmtQty(totalSold)} ${esc(h.symbol.toUpperCase())}</td>
+        <td class="num" style="opacity:.7">${fmt(h.txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.cost,0) / h.txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.qty,0), 5)}</td>
+        <td class="num ${h.realizedPnl >= 0 ? 'green' : 'red'}">${h.realizedPnl >= 0 ? '+' : '-'}${fmt(Math.abs(h.realizedPnl))}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    closedSec.style.display = 'none';
+  }
+}
+
+function renderTxList(all) {
   const wrap = document.getElementById('tx-list');
   wrap.innerHTML = '';
-  if (!holdings.length) return;
-  for (const h of holdings) {
+  if (!all.length) return;
+  for (const h of all) {
+    if (!h.txs.length) continue;
     const sorted = [...h.txs].sort((a, b) => new Date(b.date) - new Date(a.date));
     const sect = document.createElement('div');
     sect.className = 'tx-section';
@@ -963,10 +1040,11 @@ function renderTxList(holdings) {
         ${thumb ? `<img src="${thumb}" style="width:20px;height:20px;border-radius:50%;vertical-align:middle">` : ''}
         ${esc(h.name)}
         <span style="color:var(--muted);font-weight:400;font-size:12px">${sorted.length} 笔</span>
+        ${h.realizedPnl !== 0 ? `<span style="margin-left:8px;font-size:12px;font-weight:600" class="${h.realizedPnl>=0?'green':'red'}">已实现 ${h.realizedPnl>=0?'+':''}${fmt(Math.abs(h.realizedPnl)).replace('$','$')}</span>` : ''}
       </summary>
       <div class="tx-inner">
         <table>
-          <thead><tr><th>日期</th><th>类型</th><th>买入单价</th><th>数量</th><th>总花费</th><th>备注</th><th></th></tr></thead>
+          <thead><tr><th>日期</th><th>类型</th><th>单价</th><th>数量</th><th>金额</th><th>已实现盈亏</th><th>备注</th><th></th></tr></thead>
           <tbody>${sorted.map(tx => `
             <tr class="${tx.type==='sell'?'sell-row':''}">
               <td>${tx.date||'—'}</td>
@@ -974,6 +1052,7 @@ function renderTxList(holdings) {
               <td class="num">${fmt(tx.price, tx.price<1?5:2)}</td>
               <td class="num">${fmtQty(tx.qty)} <span style="color:var(--muted);font-size:11px">${esc(h.symbol.toUpperCase())}</span></td>
               <td class="num">${fmt(tx.cost)}</td>
+              <td class="num">${tx.type==='sell' && tx._realized != null ? `<span class="${tx._realized>=0?'green':'red'}">${tx._realized>=0?'+':''}${fmt(Math.abs(tx._realized))}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
               <td style="color:var(--muted)">${esc(tx.note||'')}</td>
               <td><button class="action-btn danger" onclick="deleteTx('${tx.id}')">删除</button></td>
             </tr>`).join('')}
@@ -999,12 +1078,33 @@ function openAddModal() {
   document.getElementById('f-cost').value = '';
   document.getElementById('f-note').value = '';
   document.getElementById('f-type').value = 'buy';
+  onTxTypeChange();
   document.getElementById('calc-hint').textContent = '填写单价 × 数量后自动计算';
   document.getElementById('add-modal').classList.add('open');
 }
 
+function onTxTypeChange() {
+  const isSell = document.getElementById('f-type').value === 'sell';
+  document.getElementById('f-price-label').textContent = isSell ? '卖出单价 (USD)' : '买入单价 (USD)';
+  document.getElementById('f-cost-label').textContent = isSell ? '卖出所得 (USD)' : '总花费 (USD)';
+}
+
 function quickAddCoin(id, name, symbol) {
   openAddModal();
+  document.getElementById('f-type').value = 'buy';
+  onTxTypeChange();
+  selectedCoin = { id, name, symbol, thumb: priceCache[id]?.thumb || '' };
+  document.getElementById('coin-search').value = name + ' (' + symbol.toUpperCase() + ')';
+  document.getElementById('selected-coin-hint').textContent = '✓ 已选择 ' + name;
+  document.getElementById('selected-coin-hint').style.color = 'var(--green)';
+  const p = priceCache[id];
+  if (p) document.getElementById('f-price').value = p.usd;
+}
+
+function quickSellCoin(id, name, symbol) {
+  openAddModal();
+  document.getElementById('f-type').value = 'sell';
+  onTxTypeChange();
   selectedCoin = { id, name, symbol, thumb: priceCache[id]?.thumb || '' };
   document.getElementById('coin-search').value = name + ' (' + symbol.toUpperCase() + ')';
   document.getElementById('selected-coin-hint').textContent = '✓ 已选择 ' + name;
@@ -1040,8 +1140,9 @@ function saveTx() {
   const qty = parseFloat(document.getElementById('f-qty').value);
   const cost = parseFloat(document.getElementById('f-cost').value);
   const price = parseFloat(document.getElementById('f-price').value);
-  if (isNaN(qty) || qty <= 0) { alert('请填写正确的买入数量'); return; }
-  if (isNaN(cost) || cost <= 0) { alert('请填写总花费'); return; }
+  const isSell = document.getElementById('f-type').value === 'sell';
+  if (isNaN(qty) || qty <= 0) { alert('请填写正确的数量'); return; }
+  if (isNaN(cost) || cost <= 0) { alert(isSell ? '请填写卖出所得' : '请填写总花费'); return; }
   db.txs.push({
     id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
     coinId: selectedCoin.id, name: selectedCoin.name, symbol: selectedCoin.symbol, thumb: selectedCoin.thumb || '',
