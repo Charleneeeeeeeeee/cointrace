@@ -410,10 +410,11 @@ html.light .logo-text .name {
       </div>
     </div>
     <div class="btn-group">
-      <button class="btn btn-outline" onclick="exportData()">↓ 导出</button>
-      <label class="btn btn-outline" style="cursor:pointer">↑ 导入备份<input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label>
-      <button class="btn btn-green" onclick="openExcelModal()">📊 导入 Excel</button>
-      <button class="btn btn-primary" onclick="openAddModal()">＋ 手动添加</button>
+      <button class="btn btn-outline" id="btn-export" onclick="exportData()">↓ 导出</button>
+      <label class="btn btn-outline" style="cursor:pointer"><span id="btn-import-backup">↑ 导入备份</span><input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label>
+      <button class="btn btn-green" id="btn-import-excel" onclick="openExcelModal()">📊 导入 Excel</button>
+      <button class="btn btn-primary" id="btn-add" onclick="openAddModal()">＋ 手动添加</button>
+      <button class="btn btn-outline" id="lang-btn" onclick="toggleLang()" style="min-width:38px;font-size:12px;font-weight:700;letter-spacing:.5px">EN</button>
       <div class="theme-wrap" onclick="toggleTheme()" title="切换日/夜模式" style="cursor:pointer">
         <span id="theme-icon-moon">🌙</span>
         <button class="theme-btn" tabindex="-1"></button>
@@ -425,7 +426,7 @@ html.light .logo-text .name {
   <!-- Market Prices -->
   <div class="market-section">
     <div class="section-header">
-      <div class="section-title">市场行情</div>
+      <div class="section-title" id="st-market">市场行情</div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:11px;color:var(--muted)" id="market-update-time"></span>
         <button class="btn-ghost" id="refresh-btn" onclick="refreshAll(true)" title="刷新价格" style="font-size:16px;padding:4px 8px">⟳</button>
@@ -439,27 +440,27 @@ html.light .logo-text .name {
   <!-- Portfolio Summary -->
   <div class="summary-row">
     <div class="stat-card c-cost">
-      <div class="lbl">总投入成本</div>
+      <div class="lbl" id="lbl-cost">总投入成本</div>
       <div class="val" id="s-cost">$0.00</div>
-      <div class="sub">历史买入合计</div>
+      <div class="sub" id="sub-cost">历史买入合计</div>
     </div>
     <div class="stat-card c-value">
-      <div class="lbl">当前市值</div>
+      <div class="lbl" id="lbl-value">当前市值</div>
       <div class="val" id="s-value">$0.00</div>
       <div class="sub" id="s-value-sub">实时估值</div>
     </div>
     <div class="stat-card c-pnl">
-      <div class="lbl">总盈亏</div>
+      <div class="lbl" id="lbl-pnl">总盈亏</div>
       <div class="val" id="s-pnl">—</div>
       <div class="sub" id="s-pnl-pct">—</div>
     </div>
     <div class="stat-card c-realized">
-      <div class="lbl">已实现盈亏</div>
+      <div class="lbl" id="lbl-realized">已实现盈亏</div>
       <div class="val" id="s-realized">—</div>
       <div class="sub" id="s-realized-sub">历史卖出</div>
     </div>
     <div class="stat-card c-misc">
-      <div class="lbl">持有币种</div>
+      <div class="lbl" id="lbl-coins">持有币种</div>
       <div class="val" id="s-coins">0</div>
       <div class="sub"><span class="dot" id="status-dot"></span><span id="status-text">初始化</span></div>
     </div>
@@ -468,7 +469,7 @@ html.light .logo-text .name {
   <!-- Charts -->
   <div id="chart-section" class="chart-section" style="display:none">
     <div class="section-header">
-      <div class="section-title">资产图表</div>
+      <div class="section-title" id="st-charts">资产图表</div>
       <div style="display:flex;gap:4px">
         <button class="chart-tab active" id="tab-alloc" onclick="switchChart('alloc')">持仓分布</button>
         <button class="chart-tab" id="tab-pnl" onclick="switchChart('pnl')">浮动盈亏</button>
@@ -482,20 +483,20 @@ html.light .logo-text .name {
 
   <!-- Holdings -->
   <div class="section-header">
-    <div class="section-title">持仓明细</div>
+    <div class="section-title" id="st-holdings">持仓明细</div>
     <span style="font-size:11px;color:var(--muted)" id="last-update-label"></span>
   </div>
   <div class="table-wrap" id="holdings-wrap">
     <div class="empty-state" id="holdings-empty">
       <div class="icon">🪙</div>
-      <p>还没有持仓记录<br>点击右上角「导入 Excel」或「手动添加」开始</p>
+      <p id="empty-text">还没有持仓记录<br>点击右上角「导入 Excel」或「手动添加」开始</p>
     </div>
     <table id="holdings-table" style="display:none">
       <thead>
-        <tr>
-          <th>币种</th><th>净持仓</th><th>平均成本</th>
-          <th>当前价格</th><th>当前市值</th>
-          <th>浮动盈亏</th><th>盈亏 %</th><th>已实现</th><th></th>
+        <tr id="holdings-thead-row">
+          <th id="th-coin">币种</th><th id="th-qty">净持仓</th><th id="th-avg">平均成本</th>
+          <th id="th-price">当前价格</th><th id="th-value">当前市值</th>
+          <th id="th-upnl">浮动盈亏</th><th id="th-pct">盈亏 %</th><th id="th-realized">已实现</th><th></th>
         </tr>
       </thead>
       <tbody id="holdings-body"></tbody>
@@ -505,11 +506,11 @@ html.light .logo-text .name {
   <!-- Closed positions -->
   <div id="closed-section" style="display:none" class="closed-section">
     <div class="section-header">
-      <div class="section-title">已平仓</div>
+      <div class="section-title" id="st-closed">已平仓</div>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>币种</th><th>已卖出</th><th>平均成本</th><th>已实现盈亏</th></tr></thead>
+        <thead><tr><th id="th-c-coin">币种</th><th id="th-c-sold">已卖出</th><th id="th-c-avg">平均成本</th><th id="th-c-realized">已实现盈亏</th></tr></thead>
         <tbody id="closed-body"></tbody>
       </table>
     </div>
@@ -517,7 +518,7 @@ html.light .logo-text .name {
 
   <!-- Transaction history -->
   <div class="section-header" style="margin-top:8px">
-    <div class="section-title">交易记录</div>
+    <div class="section-title" id="st-tx">交易记录</div>
   </div>
   <div id="tx-list"></div>
 
@@ -530,7 +531,7 @@ html.light .logo-text .name {
   <div class="modal">
     <h2 id="add-modal-title">添加交易记录</h2>
     <div class="field">
-      <label>搜索币种</label>
+      <label id="modal-lbl-coin">搜索币种</label>
       <div class="search-wrap">
         <input type="text" id="coin-search" placeholder="输入名称或代码，如 bitcoin / ETH…" autocomplete="off" oninput="onCoinSearch(this.value)">
         <div class="search-results" id="search-results" style="display:none"></div>
@@ -538,12 +539,12 @@ html.light .logo-text .name {
       <div class="hint" id="selected-coin-hint" style="margin-top:5px"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="field"><label>日期</label><input type="date" id="f-date"></div>
+      <div class="field"><label id="modal-lbl-date">日期</label><input type="date" id="f-date"></div>
       <div class="field">
-        <label>类型</label>
+        <label id="modal-lbl-type">类型</label>
         <select id="f-type" onchange="onTxTypeChange()">
-          <option value="buy">买入</option>
-          <option value="sell">卖出</option>
+          <option value="buy" id="opt-buy">买入</option>
+          <option value="sell" id="opt-sell">卖出</option>
         </select>
       </div>
     </div>
@@ -553,7 +554,7 @@ html.light .logo-text .name {
         <input type="number" id="f-price" placeholder="0.00" step="any" min="0" oninput="calcTotal()">
       </div>
       <div class="field">
-        <label>数量</label>
+        <label id="modal-lbl-qty">数量</label>
         <input type="number" id="f-qty" placeholder="0.00000000" step="any" min="0" oninput="calcTotal()">
       </div>
     </div>
@@ -562,10 +563,10 @@ html.light .logo-text .name {
       <input type="number" id="f-cost" placeholder="自动计算，也可手动填入" step="any" min="0" oninput="calcFromCost()">
       <div class="hint" id="calc-hint">填写单价 × 数量后自动计算</div>
     </div>
-    <div class="field"><label>备注（选填）</label><input type="text" id="f-note" placeholder="如：币安买入"></div>
+    <div class="field"><label id="modal-lbl-note">备注（选填）</label><input type="text" id="f-note" placeholder="如：币安买入"></div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('add-modal')">取消</button>
-      <button class="btn btn-primary" onclick="saveTx()">保存</button>
+      <button class="btn btn-outline" id="modal-btn-cancel" onclick="closeModal('add-modal')">取消</button>
+      <button class="btn btn-primary" id="modal-btn-save" onclick="saveTx()">保存</button>
     </div>
   </div>
 </div>
@@ -788,6 +789,122 @@ function saveWatchlist() { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(wa
 let watchlist = loadWatchlist();
 
 // ════════════════════════════════════════
+// i18n
+// ════════════════════════════════════════
+const LANGS = {
+  zh: {
+    tagline:'追踪每一笔持仓 · 冷钱包也不迷路',
+    btn_export:'↓ 导出', btn_import_backup:'↑ 导入备份',
+    btn_import_excel:'📊 导入 Excel', btn_add:'＋ 手动添加',
+    st_market:'市场行情', st_charts:'资产图表', st_holdings:'持仓明细',
+    st_closed:'已平仓', st_tx:'交易记录',
+    lbl_cost:'总投入成本', sub_cost:'历史买入合计',
+    lbl_value:'当前市值', lbl_pnl:'总盈亏',
+    lbl_realized:'已实现盈亏', lbl_coins:'持有币种',
+    chart_alloc:'持仓分布', chart_pnl:'浮动盈亏',
+    th_coin:'币种', th_qty:'净持仓', th_avg:'平均成本',
+    th_price:'当前价格', th_value:'当前市值',
+    th_upnl:'浮动盈亏', th_pct:'盈亏 %', th_realized:'已实现',
+    th_c_coin:'币种', th_c_sold:'已卖出', th_c_avg:'平均成本', th_c_realized:'已实现盈亏',
+    empty:'还没有持仓记录<br>点击右上角「导入 Excel」或「手动添加」开始',
+    modal_title:'添加交易记录', modal_coin:'搜索币种',
+    modal_date:'日期', modal_type:'类型', modal_qty:'数量', modal_note:'备注（选填）',
+    opt_buy:'买入', opt_sell:'卖出',
+    btn_cancel:'取消', btn_save:'保存',
+    btn_buy:'+买入', btn_sell:'−卖出', btn_delete:'删除',
+    status_live:'实时', status_updating:'更新中…', status_init:'初始化中…',
+    status_error:'获取失败（需翻墙）',
+    loading:'加载中…', waiting:'等待价格',
+    locked_profit:'已锁定利润', locked_loss:'已锁定亏损', from_sells:'历史卖出',
+    tx_count: n => `${n} 笔`,
+    realized_tag:'已实现',
+    market_time: t => `更新于 ${t}`,
+    buy_price:'买入单价 (USD)', sell_price:'卖出单价 (USD)',
+    total_cost:'总花费 (USD)', proceeds:'卖出所得 (USD)',
+    calc_hint:'填写单价 × 数量后自动计算',
+  },
+  en: {
+    tagline:'Track every position · Cold wallet friendly',
+    btn_export:'↓ Export', btn_import_backup:'↑ Import Backup',
+    btn_import_excel:'📊 Import Excel', btn_add:'＋ Add',
+    st_market:'Market', st_charts:'Charts', st_holdings:'Holdings',
+    st_closed:'Closed Positions', st_tx:'Transactions',
+    lbl_cost:'Total Cost', sub_cost:'Historical buys',
+    lbl_value:'Market Value', lbl_pnl:'Total P&L',
+    lbl_realized:'Realized P&L', lbl_coins:'Holdings',
+    chart_alloc:'Allocation', chart_pnl:'Unrealized P&L',
+    th_coin:'Coin', th_qty:'Net Qty', th_avg:'Avg Cost',
+    th_price:'Price', th_value:'Market Value',
+    th_upnl:'Unrealized P&L', th_pct:'P&L %', th_realized:'Realized',
+    th_c_coin:'Coin', th_c_sold:'Qty Sold', th_c_avg:'Avg Cost', th_c_realized:'Realized P&L',
+    empty:'No holdings yet<br>Click "Import Excel" or "Add" to get started',
+    modal_title:'Add Transaction', modal_coin:'Search coin',
+    modal_date:'Date', modal_type:'Type', modal_qty:'Quantity', modal_note:'Note (optional)',
+    opt_buy:'Buy', opt_sell:'Sell',
+    btn_cancel:'Cancel', btn_save:'Save',
+    btn_buy:'+Buy', btn_sell:'−Sell', btn_delete:'Delete',
+    status_live:'Live', status_updating:'Updating…', status_init:'Initializing…',
+    status_error:'Failed (VPN needed)',
+    loading:'Loading…', waiting:'Waiting for prices',
+    locked_profit:'Locked profit', locked_loss:'Locked loss', from_sells:'From sells',
+    tx_count: n => `${n} tx`,
+    realized_tag:'Realized',
+    market_time: t => `Updated ${t}`,
+    buy_price:'Buy Price (USD)', sell_price:'Sell Price (USD)',
+    total_cost:'Total Cost (USD)', proceeds:'Proceeds (USD)',
+    calc_hint:'Auto-calculated from price × qty',
+  }
+};
+
+let lang = localStorage.getItem('ct_lang') || 'zh';
+function t(key, ...args) {
+  const v = (LANGS[lang] || LANGS.zh)[key];
+  return typeof v === 'function' ? v(...args) : (v !== undefined ? v : key);
+}
+function toggleLang() {
+  lang = lang === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('ct_lang', lang);
+  applyLang();
+}
+function applyLang() {
+  const s = (id, val, prop = 'textContent') => { const el = document.getElementById(id); if (el) el[prop] = val; };
+  // Top bar
+  document.querySelector('.logo-text .tagline').textContent = t('tagline');
+  s('btn-export', t('btn_export'));
+  s('btn-import-backup', t('btn_import_backup'));
+  s('btn-import-excel', t('btn_import_excel'));
+  s('btn-add', t('btn_add'));
+  s('lang-btn', lang === 'zh' ? 'EN' : '中文');
+  // Section titles
+  s('st-market', t('st_market')); s('st-charts', t('st_charts'));
+  s('st-holdings', t('st_holdings')); s('st-closed', t('st_closed')); s('st-tx', t('st_tx'));
+  // Stat cards
+  s('lbl-cost', t('lbl_cost')); s('sub-cost', t('sub_cost'));
+  s('lbl-value', t('lbl_value')); s('lbl-pnl', t('lbl_pnl'));
+  s('lbl-realized', t('lbl_realized')); s('lbl-coins', t('lbl_coins'));
+  // Chart tabs
+  s('tab-alloc', t('chart_alloc')); s('tab-pnl', t('chart_pnl'));
+  // Holdings table headers
+  s('th-coin', t('th_coin')); s('th-qty', t('th_qty')); s('th-avg', t('th_avg'));
+  s('th-price', t('th_price')); s('th-value', t('th_value'));
+  s('th-upnl', t('th_upnl')); s('th-pct', t('th_pct')); s('th-realized', t('th_realized'));
+  // Closed table headers
+  s('th-c-coin', t('th_c_coin')); s('th-c-sold', t('th_c_sold'));
+  s('th-c-avg', t('th_c_avg')); s('th-c-realized', t('th_c_realized'));
+  // Empty state
+  s('empty-text', t('empty'), 'innerHTML');
+  // Modal
+  s('add-modal-title', t('modal_title'));
+  s('modal-lbl-coin', t('modal_coin')); s('modal-lbl-date', t('modal_date'));
+  s('modal-lbl-type', t('modal_type')); s('modal-lbl-qty', t('modal_qty'));
+  s('modal-lbl-note', t('modal_note'));
+  s('opt-buy', t('opt_buy')); s('opt-sell', t('opt_sell'));
+  s('modal-btn-cancel', t('btn_cancel')); s('modal-btn-save', t('btn_save'));
+  // Re-render dynamic content
+  renderAll();
+}
+
+// ════════════════════════════════════════
 // Data
 // ════════════════════════════════════════
 const STORAGE_KEY = 'crypto_portfolio_v3';
@@ -851,7 +968,7 @@ async function refreshAll(manual = false) {
 
   const btn = document.getElementById('refresh-btn');
   btn.innerHTML = '<span class="spin">⟳</span>';
-  if (manual) setStatus('stale', '更新中…');
+  if (manual) setStatus('stale', t('status_updating'));
 
   try {
     const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(allIds)}&order=market_cap_desc&per_page=50&price_change_percentage=24h`;
@@ -862,11 +979,11 @@ async function refreshAll(manual = false) {
     for (const c of coins) {
       priceCache[c.id] = { usd: c.current_price, change24h: c.price_change_percentage_24h || 0, thumb: c.image, ts: now };
     }
-    setStatus('live', '实时');
-    document.getElementById('market-update-time').textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN');
+    setStatus('live', t('status_live'));
+    document.getElementById('market-update-time').textContent = t('market_time', new Date().toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US'));
   } catch (e) {
-    setStatus('error', '获取失败（需翻墙）');
-    document.getElementById('market-update-time').textContent = '⚠ 网络错误';
+    setStatus('error', t('status_error'));
+    document.getElementById('market-update-time').textContent = '⚠ ' + (lang === 'zh' ? '网络错误' : 'Network error');
   }
   btn.innerHTML = '⟳';
   renderAll();
@@ -973,7 +1090,7 @@ function renderSummary(all, holdings) {
   const pnl = value - cost;
   const pnlPct = cost > 0 ? (pnl / cost) * 100 : 0;
   document.getElementById('s-cost').textContent = fmt(cost);
-  document.getElementById('s-value').textContent = holdings.length && !value ? '加载中…' : fmt(value);
+  document.getElementById('s-value').textContent = holdings.length && !value ? t('loading') : fmt(value);
   document.getElementById('s-coins').textContent = holdings.length;
   const pEl = document.getElementById('s-pnl');
   const ppEl = document.getElementById('s-pnl-pct');
@@ -982,17 +1099,17 @@ function renderSummary(all, holdings) {
     pEl.className = 'val ' + (pnl >= 0 ? 'green' : 'red');
     ppEl.textContent = fmtPct(pnlPct);
     ppEl.className = 'sub ' + (pnl >= 0 ? 'green' : 'red');
-  } else { pEl.textContent = '—'; pEl.className = 'val'; ppEl.textContent = '等待价格'; ppEl.className = 'sub'; }
+  } else { pEl.textContent = '—'; pEl.className = 'val'; ppEl.textContent = t('waiting'); ppEl.className = 'sub'; }
   const rEl = document.getElementById('s-realized');
   const rSub = document.getElementById('s-realized-sub');
   if (realized !== 0) {
     rEl.textContent = (realized >= 0 ? '+' : '-') + fmt(Math.abs(realized));
     rEl.className = 'val ' + (realized >= 0 ? 'green' : 'red');
-    rSub.textContent = realized >= 0 ? '已锁定利润' : '已锁定亏损';
+    rSub.textContent = realized >= 0 ? t('locked_profit') : t('locked_loss');
     rSub.className = 'sub ' + (realized >= 0 ? 'green' : 'red');
   } else {
     rEl.textContent = '—'; rEl.className = 'val';
-    rSub.textContent = '历史卖出'; rSub.className = 'sub';
+    rSub.textContent = t('from_sells'); rSub.className = 'sub';
   }
 }
 
@@ -1028,9 +1145,9 @@ function renderHoldings(holdings, closed) {
         <td>${pnlPct != null ? `<span class="pnl-badge ${pnlPct >= 0 ? 'pos' : 'neg'}">${fmtPct(pnlPct)}</span>` : '<span class="loading-price"></span>'}</td>
         <td class="num">${realizedCell}</td>
         <td style="white-space:nowrap">
-          <button class="action-btn" onclick="quickAddCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')">+买入</button>
-          <button class="action-btn" onclick="quickSellCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')" style="margin-left:4px">−卖出</button>
-          <button class="action-btn danger" onclick="deleteCoin('${h.coinId}')" style="margin-left:4px">删除</button>
+          <button class="action-btn" onclick="quickAddCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')">${t('btn_buy')}</button>
+          <button class="action-btn" onclick="quickSellCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')" style="margin-left:4px">${t('btn_sell')}</button>
+          <button class="action-btn danger" onclick="deleteCoin('${h.coinId}')" style="margin-left:4px">${t('btn_delete')}</button>
         </td>`;
       tbody.appendChild(tr);
     }
@@ -1072,22 +1189,22 @@ function renderTxList(all) {
       <summary>
         ${thumb ? `<img src="${thumb}" style="width:20px;height:20px;border-radius:50%;vertical-align:middle">` : ''}
         ${esc(h.name)}
-        <span style="color:var(--muted);font-weight:400;font-size:12px">${sorted.length} 笔</span>
-        ${h.realizedPnl !== 0 ? `<span style="margin-left:8px;font-size:12px;font-weight:600" class="${h.realizedPnl>=0?'green':'red'}">已实现 ${h.realizedPnl>=0?'+':''}${fmt(Math.abs(h.realizedPnl)).replace('$','$')}</span>` : ''}
+        <span style="color:var(--muted);font-weight:400;font-size:12px">${t('tx_count', sorted.length)}</span>
+        ${h.realizedPnl !== 0 ? `<span style="margin-left:8px;font-size:12px;font-weight:600" class="${h.realizedPnl>=0?'green':'red'}">${t('realized_tag')} ${h.realizedPnl>=0?'+':''}${fmt(Math.abs(h.realizedPnl))}</span>` : ''}
       </summary>
       <div class="tx-inner">
         <table>
-          <thead><tr><th>日期</th><th>类型</th><th>单价</th><th>数量</th><th>金额</th><th>已实现盈亏</th><th>备注</th><th></th></tr></thead>
+          <thead><tr><th>${t('th_date')}</th><th>${t('modal_type')}</th><th>${t('th_price')}</th><th>${t('th_qty')}</th><th>${t('th_value')}</th><th>${t('th_c_realized')}</th><th>${t('modal_note').replace(' (optional)','').replace('（选填）','')}</th><th></th></tr></thead>
           <tbody>${sorted.map(tx => `
             <tr class="${tx.type==='sell'?'sell-row':''}">
               <td>${tx.date||'—'}</td>
-              <td>${tx.type==='sell'?'<span class="sell-badge">卖出</span>':'<span class="buy-badge">买入</span>'}</td>
+              <td>${tx.type==='sell'?`<span class="sell-badge">${t('opt_sell')}</span>`:`<span class="buy-badge">${t('opt_buy')}</span>`}</td>
               <td class="num">${fmt(tx.price, tx.price<1?5:2)}</td>
               <td class="num">${fmtQty(tx.qty)} <span style="color:var(--muted);font-size:11px">${esc(h.symbol.toUpperCase())}</span></td>
               <td class="num">${fmt(tx.cost)}</td>
               <td class="num">${tx.type==='sell' && tx._realized != null ? `<span class="${tx._realized>=0?'green':'red'}">${tx._realized>=0?'+':''}${fmt(Math.abs(tx._realized))}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
               <td style="color:var(--muted)">${esc(tx.note||'')}</td>
-              <td><button class="action-btn danger" onclick="deleteTx('${tx.id}')">删除</button></td>
+              <td><button class="action-btn danger" onclick="deleteTx('${tx.id}')">${t('btn_delete')}</button></td>
             </tr>`).join('')}
           </tbody>
         </table>
@@ -1118,8 +1235,9 @@ function openAddModal() {
 
 function onTxTypeChange() {
   const isSell = document.getElementById('f-type').value === 'sell';
-  document.getElementById('f-price-label').textContent = isSell ? '卖出单价 (USD)' : '买入单价 (USD)';
-  document.getElementById('f-cost-label').textContent = isSell ? '卖出所得 (USD)' : '总花费 (USD)';
+  document.getElementById('f-price-label').textContent = isSell ? t('sell_price') : t('buy_price');
+  document.getElementById('f-cost-label').textContent = isSell ? t('proceeds') : t('total_cost');
+  document.getElementById('calc-hint').textContent = t('calc_hint');
 }
 
 function quickAddCoin(id, name, symbol) {
@@ -1676,8 +1794,8 @@ function renderPnlChart(holdings) {
 // ════════════════════════════════════════
 // Boot
 // ════════════════════════════════════════
-renderAll();
-setStatus('stale', '初始化中…');
+applyLang();
+setStatus('stale', t('status_init'));
 refreshAll(false);
 scheduleRefresh();
 </script>
