@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>币迹 CoinTrace</title>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #08090e;
+  --surface: #0f1117;
+  --border: #1e2330;
+  --border-light: #262d3d;
+  --text: #e8edf5;
+  --muted: #6b7590;
+  --green: #22c55e;
+  --red: #ef4444;
+  --blue: #6366f1;
+  --blue-glow: rgba(99,102,241,.35);
+  --yellow: #eab308;
+  --card: #0f1117;
+  --card2: #131720;
+  --hover: #161c28;
+  --r: 12px;
+  --accent: #6366f1;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+}
+.app { max-width: 1320px; margin: 0 auto; padding: 28px 20px; }
+
+/* ── Header ── */
+.top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 32px; flex-wrap: wrap; gap: 14px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; box-shadow: 0 0 18px rgba(99,102,241,.4);
+  flex-shrink: 0;
+}
+.logo-text { line-height: 1.2; }
+.logo-text .name {
+  font-size: 19px; font-weight: 800; letter-spacing: -.3px;
+  background: linear-gradient(90deg, #a5b4fc, #818cf8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-text .tagline { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.btn-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px; border: none;
+  cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; box-shadow: 0 2px 12px rgba(99,102,241,.35);
+}
+.btn-primary:hover { filter: brightness(1.12); box-shadow: 0 4px 18px rgba(99,102,241,.5); }
+.btn-outline {
+  background: var(--card2); border: 1px solid var(--border-light);
+  color: var(--text);
+}
+.btn-outline:hover { border-color: var(--blue); color: #a5b4fc; background: rgba(99,102,241,.08); }
+.btn-ghost { background: none; border: none; color: var(--muted); padding: 7px 10px; cursor: pointer; font-size: 15px; transition: color .15s; }
+.btn-ghost:hover { color: var(--text); }
+.btn-green {
+  background: rgba(34,197,94,.12); color: #4ade80;
+  border: 1px solid rgba(34,197,94,.25);
+}
+.btn-green:hover { background: rgba(34,197,94,.2); }
+
+/* ── Section header ── */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.section-title {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  display: flex; align-items: center; gap: 7px;
+}
+.section-title::before {
+  content: ''; display: inline-block;
+  width: 3px; height: 14px; border-radius: 2px;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6);
+}
+
+/* ── Market grid ── */
+.market-section { margin-bottom: 32px; }
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px; }
+
+.market-card {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 14px;
+  cursor: pointer; transition: all .18s; position: relative;
+}
+.market-card:hover {
+  border-color: var(--blue); background: rgba(99,102,241,.06);
+  transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.3);
+}
+.market-card.in-portfolio {
+  border-color: rgba(99,102,241,.5);
+  background: rgba(99,102,241,.05);
+}
+.market-card .mc-remove {
+  display: none; position: absolute; top: 7px; right: 7px;
+  background: var(--border); border: none; color: var(--muted);
+  width: 18px; height: 18px; border-radius: 50%; font-size: 11px;
+  line-height: 18px; text-align: center; cursor: pointer; padding: 0;
+  transition: all .12s;
+}
+.market-card:hover .mc-remove { display: block; }
+.market-card .mc-remove:hover { background: var(--red); color: #fff; }
+
+.market-card-add {
+  background: none; border: 1.5px dashed var(--border-light);
+  border-radius: var(--r); padding: 14px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 5px; color: var(--muted);
+  font-size: 12px; transition: all .15s; min-height: 90px;
+}
+.market-card-add:hover { border-color: var(--blue); color: #a5b4fc; background: rgba(99,102,241,.05); }
+
+.mc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.mc-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--border); overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--muted);
+}
+.mc-icon img { width: 100%; height: 100%; object-fit: cover; }
+.mc-name { font-size: 12px; font-weight: 700; }
+.mc-ticker { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.mc-price { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mc-change { font-size: 11px; margin-top: 3px; font-weight: 500; }
+
+/* ── Summary cards ── */
+.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 720px) { .summary-row { grid-template-columns: 1fr 1fr; } .market-grid { grid-template-columns: repeat(3,1fr); } }
+
+.stat-card {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px 20px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 3px; height: 100%; border-radius: 12px 0 0 12px;
+}
+.stat-card.c-cost::before { background: linear-gradient(180deg,#6366f1,#8b5cf6); }
+.stat-card.c-value::before { background: linear-gradient(180deg,#0ea5e9,#38bdf8); }
+.stat-card.c-pnl::before { background: linear-gradient(180deg,#22c55e,#4ade80); }
+.stat-card.c-misc::before { background: linear-gradient(180deg,#f59e0b,#fbbf24); }
+
+.stat-card .lbl {
+  font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .6px; margin-bottom: 8px; font-weight: 600;
+}
+.stat-card .val {
+  font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums;
+  letter-spacing: -.5px;
+}
+.stat-card .sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+/* ── Table ── */
+.table-wrap {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 24px;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left; padding: 11px 16px; font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .6px; font-weight: 700;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--hover); }
+
+.coin-cell { display: flex; align-items: center; gap: 11px; }
+.coin-icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--border); display: flex; align-items: center;
+  justify-content: center; font-size: 13px; font-weight: 700;
+  color: var(--muted); overflow: hidden; flex-shrink: 0;
+}
+.coin-icon img { width: 100%; height: 100%; object-fit: cover; }
+.coin-name { font-weight: 700; font-size: 13px; }
+.coin-tick { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.num { font-variant-numeric: tabular-nums; }
+.green { color: var(--green); }
+.red { color: var(--red); }
+
+.pnl-badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.pnl-badge.pos { background: rgba(34,197,94,.12); color: #4ade80; }
+.pnl-badge.neg { background: rgba(239,68,68,.12); color: #f87171; }
+
+.action-btn {
+  background: none; border: 1px solid var(--border-light);
+  color: var(--muted); padding: 4px 9px; border-radius: 6px;
+  cursor: pointer; font-size: 11px; transition: all .12s; font-weight: 600;
+}
+.action-btn:hover { border-color: var(--blue); color: #a5b4fc; background: rgba(99,102,241,.08); }
+.action-btn.danger:hover { border-color: #ef4444; color: #f87171; background: rgba(239,68,68,.08); }
+
+.empty-state { padding: 56px 16px; text-align: center; color: var(--muted); }
+.empty-state .icon { font-size: 44px; margin-bottom: 14px; opacity: .6; }
+.empty-state p { font-size: 14px; line-height: 1.6; }
+
+/* ── TX Accordion ── */
+.tx-section { margin-bottom: 8px; }
+.tx-section details summary {
+  cursor: pointer; user-select: none; padding: 11px 16px;
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: var(--r); display: flex; align-items: center;
+  gap: 9px; list-style: none; font-weight: 700; font-size: 13px;
+  transition: background .12s;
+}
+.tx-section details summary::-webkit-details-marker { display: none; }
+.tx-section details summary:hover { background: var(--hover); }
+.tx-section details[open] summary { border-radius: var(--r) var(--r) 0 0; border-bottom: none; }
+.tx-inner { background: var(--card2); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r) var(--r); overflow: hidden; }
+
+/* ── Modal ── */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  z-index: 100; align-items: center; justify-content: center;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: #131720; border: 1px solid var(--border-light);
+  border-radius: 16px; padding: 26px; width: 480px;
+  max-width: 95vw; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.modal h2 { font-size: 17px; font-weight: 800; margin-bottom: 22px; }
+
+.field { margin-bottom: 15px; }
+.field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.field input, .field select, .field textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--border-light);
+  color: var(--text); padding: 10px 13px; border-radius: 8px;
+  font-size: 14px; outline: none; transition: border-color .15s;
+}
+.field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.field .hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; border-top: 1px solid var(--border); padding-top: 16px; }
+
+/* Coin search */
+.search-wrap { position: relative; }
+.search-results {
+  position: absolute; top: calc(100% + 5px); left: 0; right: 0;
+  background: #1a2030; border: 1px solid var(--border-light);
+  border-radius: 10px; max-height: 230px; overflow-y: auto;
+  z-index: 10; box-shadow: 0 12px 32px rgba(0,0,0,.5);
+}
+.search-item { display: flex; align-items: center; gap: 10px; padding: 10px 13px; cursor: pointer; transition: background .1s; }
+.search-item:hover { background: var(--hover); }
+.search-item img { width: 24px; height: 24px; border-radius: 50%; }
+.search-item .si-name { font-weight: 700; font-size: 13px; }
+.search-item .si-id { font-size: 11px; color: var(--muted); }
+.search-item .si-tick { margin-left: auto; font-size: 11px; color: var(--muted); background: var(--border); padding: 2px 7px; border-radius: 4px; }
+
+/* Excel import */
+.drop-zone {
+  border: 2px dashed var(--border-light); border-radius: 12px;
+  padding: 36px; text-align: center; cursor: pointer; transition: all .15s;
+}
+.drop-zone:hover, .drop-zone.drag { border-color: var(--blue); background: rgba(99,102,241,.05); }
+.drop-zone .dz-icon { font-size: 36px; margin-bottom: 10px; }
+.drop-zone p { color: var(--muted); font-size: 13px; }
+
+.preview-table-wrap { max-height: 200px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 12px; }
+.preview-table-wrap table thead th { background: var(--surface); font-size: 11px; padding: 7px 10px; }
+.preview-table-wrap table tbody td { padding: 6px 10px; font-size: 12px; }
+.col-map { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.import-stat {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  padding: 10px 14px; background: var(--surface);
+  border-radius: 8px; margin-top: 10px; font-size: 12px; color: var(--muted);
+}
+.import-stat span { color: var(--text); font-weight: 700; }
+
+/* Status */
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot.stale { background: var(--yellow); }
+.dot.error { background: var(--red); }
+.spin { animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-price {
+  display: inline-block; width: 56px; height: 11px;
+  background: var(--border); border-radius: 3px;
+  animation: pulse 1.4s ease-in-out infinite; vertical-align: middle;
+}
+@keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:.7} }
+
+.sell-row td { color: var(--muted) !important; }
+.sell-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; background: rgba(239,68,68,.12); color: #f87171; }
+.buy-badge  { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; background: rgba(34,197,94,.12); color: #4ade80; }
+
+/* ── Theme toggle button ── */
+.theme-btn {
+  width: 38px; height: 22px; border-radius: 11px;
+  background: var(--border-light); border: 1px solid var(--border);
+  cursor: pointer; position: relative; transition: background .25s;
+  flex-shrink: 0;
+}
+.theme-btn::after {
+  content: ''; position: absolute;
+  top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--muted); transition: all .25s;
+}
+html.light .theme-btn { background: #c7d2fe; border-color: #a5b4fc; }
+html.light .theme-btn::after { left: 19px; background: #6366f1; }
+.theme-wrap { display: flex; align-items: center; gap: 7px; }
+.theme-wrap span { font-size: 14px; line-height: 1; }
+
+/* ── Light mode overrides ── */
+html.light {
+  --bg: #eef0f8;
+  --surface: #ffffff;
+  --border: #dde1ef;
+  --border-light: #e8ecf7;
+  --text: #0e1120;
+  --muted: #7880a0;
+  --green: #16a34a;
+  --red: #dc2626;
+  --blue: #4f46e5;
+  --blue-glow: rgba(79,70,229,.2);
+  --yellow: #b45309;
+  --card: #ffffff;
+  --card2: #f5f7ff;
+  --hover: #ebedfa;
+}
+html.light body { background: var(--bg); }
+html.light .top-bar { border-bottom-color: var(--border); }
+html.light .modal { background: #ffffff; }
+html.light .search-results { background: #ffffff; }
+html.light .drop-zone { border-color: var(--border); }
+html.light .drop-zone:hover { background: rgba(79,70,229,.04); }
+html.light .table-wrap,
+html.light .tx-section details summary,
+html.light .tx-inner { box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+html.light .stat-card { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+html.light .market-card { box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+html.light .market-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+html.light .btn-outline { background: #ffffff; }
+html.light .sell-badge { color: #dc2626; background: rgba(220,38,38,.1); }
+html.light .buy-badge  { color: #16a34a; background: rgba(22,163,74,.1); }
+html.light .pnl-badge.pos { background: rgba(22,163,74,.1); color: #15803d; }
+html.light .pnl-badge.neg { background: rgba(220,38,38,.1); color: #b91c1c; }
+html.light .logo-text .name {
+  background: linear-gradient(90deg,#4f46e5,#7c3aed);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="logo">
+      <div class="logo-icon">₿</div>
+      <div class="logo-text">
+        <div class="name">币迹 CoinTrace</div>
+        <div class="tagline">追踪每一笔持仓 · 冷钱包也不迷路</div>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline" onclick="exportData()">↓ 导出</button>
+      <label class="btn btn-outline" style="cursor:pointer">↑ 导入备份<input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label>
+      <button class="btn btn-green" onclick="openExcelModal()">📊 导入 Excel</button>
+      <button class="btn btn-primary" onclick="openAddModal()">＋ 手动添加</button>
+      <div class="theme-wrap" onclick="toggleTheme()" title="切换日/夜模式" style="cursor:pointer">
+        <span id="theme-icon-moon">🌙</span>
+        <button class="theme-btn" tabindex="-1"></button>
+        <span id="theme-icon-sun">☀️</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Market Prices -->
+  <div class="market-section">
+    <div class="section-header">
+      <div class="section-title">市场行情</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--muted)" id="market-update-time"></span>
+        <button class="btn-ghost" id="refresh-btn" onclick="refreshAll(true)" title="刷新价格" style="font-size:16px;padding:4px 8px">⟳</button>
+      </div>
+    </div>
+    <div class="market-grid" id="market-grid">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Portfolio Summary -->
+  <div class="summary-row">
+    <div class="stat-card c-cost">
+      <div class="lbl">总投入成本</div>
+      <div class="val" id="s-cost">$0.00</div>
+      <div class="sub">历史买入合计</div>
+    </div>
+    <div class="stat-card c-value">
+      <div class="lbl">当前市值</div>
+      <div class="val" id="s-value">$0.00</div>
+      <div class="sub" id="s-value-sub">实时估值</div>
+    </div>
+    <div class="stat-card c-pnl">
+      <div class="lbl">总盈亏</div>
+      <div class="val" id="s-pnl">—</div>
+      <div class="sub" id="s-pnl-pct">—</div>
+    </div>
+    <div class="stat-card c-misc">
+      <div class="lbl">持有币种</div>
+      <div class="val" id="s-coins">0</div>
+      <div class="sub"><span class="dot" id="status-dot"></span><span id="status-text">初始化</span></div>
+    </div>
+  </div>
+
+  <!-- Holdings -->
+  <div class="section-header">
+    <div class="section-title">持仓明细</div>
+    <span style="font-size:11px;color:var(--muted)" id="last-update-label"></span>
+  </div>
+  <div class="table-wrap" id="holdings-wrap">
+    <div class="empty-state" id="holdings-empty">
+      <div class="icon">🪙</div>
+      <p>还没有持仓记录<br>点击右上角「导入 Excel」或「手动添加」开始</p>
+    </div>
+    <table id="holdings-table" style="display:none">
+      <thead>
+        <tr>
+          <th>币种</th><th>净持仓</th><th>平均成本</th>
+          <th>当前价格</th><th>当前市值</th>
+          <th>盈亏 (USD)</th><th>盈亏 %</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="holdings-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Transaction history -->
+  <div class="section-header" style="margin-top:8px">
+    <div class="section-title">交易记录</div>
+  </div>
+  <div id="tx-list"></div>
+
+</div>
+
+<!-- ═══════════════════════════════════
+     ADD TRANSACTION MODAL
+═══════════════════════════════════ -->
+<div class="modal-bg" id="add-modal">
+  <div class="modal">
+    <h2>手动添加买入记录</h2>
+    <div class="field">
+      <label>搜索币种</label>
+      <div class="search-wrap">
+        <input type="text" id="coin-search" placeholder="输入名称或代码，如 bitcoin / ETH…" autocomplete="off" oninput="onCoinSearch(this.value)">
+        <div class="search-results" id="search-results" style="display:none"></div>
+      </div>
+      <div class="hint" id="selected-coin-hint" style="margin-top:5px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>日期</label><input type="date" id="f-date"></div>
+      <div class="field">
+        <label>类型</label>
+        <select id="f-type">
+          <option value="buy">买入</option>
+          <option value="sell">卖出</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field">
+        <label>买入单价 (USD)</label>
+        <input type="number" id="f-price" placeholder="0.00" step="any" min="0" oninput="calcTotal()">
+      </div>
+      <div class="field">
+        <label>数量</label>
+        <input type="number" id="f-qty" placeholder="0.00000000" step="any" min="0" oninput="calcTotal()">
+      </div>
+    </div>
+    <div class="field">
+      <label>总花费 (USD)</label>
+      <input type="number" id="f-cost" placeholder="自动计算，也可手动填入" step="any" min="0" oninput="calcFromCost()">
+      <div class="hint" id="calc-hint">填写单价 × 数量后自动计算</div>
+    </div>
+    <div class="field"><label>备注（选填）</label><input type="text" id="f-note" placeholder="如：币安买入"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('add-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveTx()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     EXCEL IMPORT MODAL
+═══════════════════════════════════ -->
+<div class="modal-bg" id="excel-modal">
+  <div class="modal" style="width:560px">
+    <h2>📊 导入 Excel 记录</h2>
+
+    <!-- Step 1: upload -->
+    <div id="xl-step1">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('xl-file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <div class="dz-icon">📂</div>
+        <p>点击选择，或将 .xlsx / .xls / .csv 文件拖入此处</p>
+        <p style="font-size:11px;margin-top:6px">支持 ADA.xlsx、BTC.xlsx 等格式</p>
+        <input type="file" id="xl-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseExcel(this.files[0])">
+      </div>
+    </div>
+
+    <!-- Step 2: map columns & preview -->
+    <div id="xl-step2" style="display:none">
+      <div style="margin-bottom:12px;font-size:13px;color:var(--muted)">
+        已读取 <span id="xl-filename" style="color:var(--text);font-weight:600"></span>，检测到 <span id="xl-rowcount" style="color:var(--text);font-weight:600"></span> 行数据
+      </div>
+
+      <!-- Coin selection -->
+      <div class="field">
+        <label>这是哪个币种？</label>
+        <div class="search-wrap">
+          <input type="text" id="xl-coin-search" placeholder="搜索币种，如 cardano / ADA…" autocomplete="off" oninput="onXlCoinSearch(this.value)">
+          <div class="search-results" id="xl-search-results" style="display:none"></div>
+        </div>
+        <div class="hint" id="xl-coin-hint" style="margin-top:5px"></div>
+      </div>
+
+      <!-- Column mapping -->
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">列映射 & 货币</div>
+
+      <!-- 日期 & 数量（无货币） -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="field" style="margin:0">
+          <label>日期列</label>
+          <select id="xl-col-date"></select>
+        </div>
+        <div class="field" style="margin:0">
+          <label>数量列</label>
+          <select id="xl-col-qty"></select>
+        </div>
+      </div>
+
+      <!-- 花费列 + 货币 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:8px">
+          <div class="field" style="margin:0">
+            <label>花费 / 成本列</label>
+            <select id="xl-col-cost"></select>
+          </div>
+          <div class="field" style="margin:0;width:130px">
+            <label>该列货币</label>
+            <select id="xl-cost-ccy" onchange="onCostCcyChange()">
+              <option value="USD" selected>美元 USD</option>
+              <option value="CNY">人民币 CNY</option>
+              <option value="HKD">港币 HKD</option>
+              <option value="EUR">欧元 EUR</option>
+              <option value="GBP">英镑 GBP</option>
+            </select>
+          </div>
+        </div>
+        <div id="cost-rate-row" style="display:flex;gap:8px;align-items:center">
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap">1 USD = <span id="cost-ccy-label">CNY</span></div>
+          <input type="number" id="xl-cost-rate" placeholder="7.25" step="0.0001" min="0.0001" style="width:90px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:13px">
+          <button class="btn btn-outline" style="padding:6px 10px;font-size:12px" onclick="fetchRate('cost')">获取实时</button>
+          <span class="hint" id="cost-rate-hint" style="margin:0">花费 ÷ 汇率 → USD</span>
+        </div>
+      </div>
+
+      <!-- 单价列 + 货币 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:8px">
+          <div class="field" style="margin:0">
+            <label>单价列（选填）</label>
+            <select id="xl-col-price"><option value="">— 不选，由花费÷数量推算 —</option></select>
+          </div>
+          <div class="field" style="margin:0;width:130px">
+            <label>该列货币</label>
+            <select id="xl-price-ccy" onchange="onPriceCcyChange()">
+              <option value="USD" selected>美元 USD</option>
+              <option value="CNY">人民币 CNY</option>
+              <option value="HKD">港币 HKD</option>
+              <option value="EUR">欧元 EUR</option>
+              <option value="GBP">英镑 GBP</option>
+            </select>
+          </div>
+        </div>
+        <div id="price-rate-row" style="display:none;gap:8px;align-items:center">
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap">1 USD = <span id="price-ccy-label">CNY</span></div>
+          <input type="number" id="xl-price-rate" placeholder="7.25" step="0.0001" min="0.0001" style="width:90px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:13px">
+          <button class="btn btn-outline" style="padding:6px 10px;font-size:12px" onclick="fetchRate('price')">获取实时</button>
+          <span class="hint" id="price-rate-hint" style="margin:0">单价 ÷ 汇率 → USD</span>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div style="display:flex;gap:16px;margin-bottom:12px;font-size:13px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="xl-skip-neg" checked>
+          跳过负数行（卖出）
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="xl-skip-bad" checked>
+          跳过无效行
+        </label>
+      </div>
+
+      <button class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:12px" onclick="previewImport()">👁 预览解析结果</button>
+
+      <div id="xl-preview" style="display:none">
+        <div class="import-stat" id="xl-stat"></div>
+        <div class="preview-table-wrap" id="xl-preview-table"></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('excel-modal');resetExcelModal()">取消</button>
+      <button class="btn btn-outline" id="xl-back-btn" style="display:none" onclick="xlBack()">← 返回</button>
+      <button class="btn btn-primary" id="xl-confirm-btn" style="display:none" onclick="confirmExcelImport()">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Watchlist add modal -->
+<div class="modal-bg" id="watchlist-modal">
+  <div class="modal" style="width:400px">
+    <h2>添加币种到行情</h2>
+    <div class="field">
+      <label>搜索币种</label>
+      <div class="search-wrap">
+        <input type="text" id="wl-search-input" placeholder="输入名称或代码，如 solana / SOL…" autocomplete="off" oninput="onWlSearch(this.value)">
+        <div class="search-results" id="wl-search-results"></div>
+      </div>
+      <div class="hint">选中后自动添加并刷新价格</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('watchlist-modal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// WATCHLIST — stored in localStorage, fully customizable
+// ════════════════════════════════════════
+const WATCHLIST_KEY = 'crypto_watchlist_v2';
+const WATCHLIST_DEFAULT = [
+  // ── Layer 1 majors ──
+  { id: 'bitcoin',              symbol: 'BTC',   name: 'Bitcoin' },
+  { id: 'ethereum',             symbol: 'ETH',   name: 'Ethereum' },
+  { id: 'binancecoin',          symbol: 'BNB',   name: 'BNB' },
+  { id: 'solana',               symbol: 'SOL',   name: 'Solana' },
+  { id: 'ripple',               symbol: 'XRP',   name: 'XRP' },
+  { id: 'cardano',              symbol: 'ADA',   name: 'Cardano' },
+  { id: 'tron',                 symbol: 'TRX',   name: 'TRON' },
+  { id: 'toncoin',              symbol: 'TON',   name: 'Toncoin' },
+  { id: 'avalanche-2',          symbol: 'AVAX',  name: 'Avalanche' },
+  { id: 'sui',                  symbol: 'SUI',   name: 'Sui' },
+  { id: 'aptos',                symbol: 'APT',   name: 'Aptos' },
+  { id: 'near',                 symbol: 'NEAR',  name: 'NEAR Protocol' },
+  { id: 'internet-computer',    symbol: 'ICP',   name: 'Internet Computer' },
+  { id: 'hedera-hashgraph',     symbol: 'HBAR',  name: 'Hedera' },
+  { id: 'stellar',              symbol: 'XLM',   name: 'Stellar' },
+  { id: 'vechain',              symbol: 'VET',   name: 'VeChain' },
+  { id: 'algorand',             symbol: 'ALGO',  name: 'Algorand' },
+  { id: 'cosmos',               symbol: 'ATOM',  name: 'Cosmos' },
+  // ── Layer 2 & Infra ──
+  { id: 'matic-network',        symbol: 'POL',   name: 'Polygon' },
+  { id: 'optimism',             symbol: 'OP',    name: 'Optimism' },
+  { id: 'arbitrum',             symbol: 'ARB',   name: 'Arbitrum' },
+  { id: 'stacks',               symbol: 'STX',   name: 'Stacks' },
+  { id: 'sei-network',          symbol: 'SEI',   name: 'Sei' },
+  // ── DeFi ──
+  { id: 'chainlink',            symbol: 'LINK',  name: 'Chainlink' },
+  { id: 'uniswap',              symbol: 'UNI',   name: 'Uniswap' },
+  { id: 'aave',                 symbol: 'AAVE',  name: 'Aave' },
+  { id: 'thorchain',            symbol: 'RUNE',  name: 'THORChain' },
+  { id: 'injective-protocol',   symbol: 'INJ',   name: 'Injective' },
+  { id: 'render-token',         symbol: 'RENDER',name: 'Render' },
+  // ── OG coins ──
+  { id: 'litecoin',             symbol: 'LTC',   name: 'Litecoin' },
+  { id: 'bitcoin-cash',         symbol: 'BCH',   name: 'Bitcoin Cash' },
+  { id: 'ethereum-classic',     symbol: 'ETC',   name: 'Ethereum Classic' },
+  { id: 'monero',               symbol: 'XMR',   name: 'Monero' },
+  { id: 'polkadot',             symbol: 'DOT',   name: 'Polkadot' },
+  { id: 'filecoin',             symbol: 'FIL',   name: 'Filecoin' },
+  // ── Meme ──
+  { id: 'dogecoin',             symbol: 'DOGE',  name: 'Dogecoin' },
+  { id: 'shiba-inu',            symbol: 'SHIB',  name: 'Shiba Inu' },
+  { id: 'pepe',                 symbol: 'PEPE',  name: 'Pepe' },
+  { id: 'dogwifcoin',           symbol: 'WIF',   name: 'dogwifhat' },
+  { id: 'bonk',                 symbol: 'BONK',  name: 'Bonk' },
+  // ── Gaming / NFT / Other ──
+  { id: 'the-sandbox',          symbol: 'SAND',  name: 'The Sandbox' },
+  { id: 'decentraland',         symbol: 'MANA',  name: 'Decentraland' },
+  { id: 'flow',                 symbol: 'FLOW',  name: 'Flow' },
+  { id: 'gala',                 symbol: 'GALA',  name: 'Gala' },
+  { id: 'axie-infinity',        symbol: 'AXS',   name: 'Axie Infinity' },
+];
+
+function loadWatchlist() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(WATCHLIST_KEY));
+    return Array.isArray(saved) && saved.length ? saved : [...WATCHLIST_DEFAULT];
+  } catch { return [...WATCHLIST_DEFAULT]; }
+}
+function saveWatchlist() { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist)); }
+let watchlist = loadWatchlist();
+
+// ════════════════════════════════════════
+// Data
+// ════════════════════════════════════════
+const STORAGE_KEY = 'crypto_portfolio_v3';
+let db = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { txs: [] }; } catch { return { txs: [] }; } })();
+let priceCache = {};      // coinId → { usd, change24h, thumb, ts }
+let priceTimer = null;
+let selectedCoin = null;
+let xlSelectedCoin = null;
+let xlRawRows = [];
+let xlHeaders = [];
+let pendingImport = [];
+let searchTimer = null;
+let xlSearchTimer = null;
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+
+// ════════════════════════════════════════
+// Holdings
+// ════════════════════════════════════════
+function getHoldings() {
+  const map = {};
+  for (const tx of db.txs) {
+    if (!map[tx.coinId]) map[tx.coinId] = { coinId: tx.coinId, name: tx.name, symbol: tx.symbol, thumb: tx.thumb || '', netQty: 0, totalBuyCost: 0, totalBuyQty: 0, txs: [] };
+    const h = map[tx.coinId];
+    if (tx.type === 'sell') {
+      h.netQty -= tx.qty;
+    } else {
+      h.netQty += tx.qty;
+      h.totalBuyCost += tx.cost;
+      h.totalBuyQty += tx.qty;
+    }
+    h.txs.push(tx);
+  }
+  return Object.values(map).filter(h => h.netQty > 0.000000001);
+}
+
+// ════════════════════════════════════════
+// Price fetching
+// ════════════════════════════════════════
+function setStatus(s, t) {
+  document.getElementById('status-dot').className = 'dot ' + s;
+  document.getElementById('status-text').textContent = t;
+}
+
+async function refreshAll(manual = false) {
+  const holdings = getHoldings();
+  const portfolioIds = holdings.map(h => h.coinId);
+  const watchIds = watchlist.map(w => w.id);
+  const allIds = [...new Set([...portfolioIds, ...watchIds])].join(',');
+
+  const btn = document.getElementById('refresh-btn');
+  btn.innerHTML = '<span class="spin">⟳</span>';
+  if (manual) setStatus('stale', '更新中…');
+
+  try {
+    const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(allIds)}&order=market_cap_desc&per_page=50&price_change_percentage=24h`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const coins = await res.json();
+    const now = Date.now();
+    for (const c of coins) {
+      priceCache[c.id] = { usd: c.current_price, change24h: c.price_change_percentage_24h || 0, thumb: c.image, ts: now };
+    }
+    setStatus('live', '实时');
+    document.getElementById('market-update-time').textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN');
+  } catch (e) {
+    setStatus('error', '获取失败（需翻墙）');
+    document.getElementById('market-update-time').textContent = '⚠ 网络错误';
+  }
+  btn.innerHTML = '⟳';
+  renderAll();
+}
+
+function scheduleRefresh() {
+  clearInterval(priceTimer);
+  priceTimer = setInterval(() => refreshAll(false), 60000);
+}
+
+// ════════════════════════════════════════
+// Rendering
+// ════════════════════════════════════════
+function fmt(n, d = 2) {
+  if (n == null || isNaN(n)) return '—';
+  return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtPct(n) { if (n == null) return '—'; return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
+function fmtQty(n) {
+  if (!n) return '0';
+  if (n < 0.001) return n.toFixed(8);
+  if (n < 1) return n.toFixed(6);
+  if (n < 1000) return n.toFixed(4);
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+function esc(s) { return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function renderAll() {
+  const holdings = getHoldings();
+  renderMarket(holdings);
+  renderSummary(holdings);
+  renderHoldings(holdings);
+  renderTxList(holdings);
+}
+
+function renderMarket(holdings) {
+  const portfolioIds = new Set(holdings.map(h => h.coinId));
+  const grid = document.getElementById('market-grid');
+  const cards = watchlist.map(w => {
+    const p = priceCache[w.id];
+    const inPort = portfolioIds.has(w.id);
+    const price = p ? (p.usd < 0.01 ? fmt(p.usd, 6) : p.usd < 1 ? fmt(p.usd, 4) : fmt(p.usd, 2)) : null;
+    const chg = p ? p.change24h : null;
+    const thumb = p ? p.thumb : null;
+    return `<div class="market-card ${inPort ? 'in-portfolio' : ''}" onclick="quickAddCoin('${esc(w.id)}','${esc(w.name)}','${esc(w.symbol)}')" title="点击添加买入记录">
+      <button class="mc-remove" onclick="removeFromWatchlist(event,'${esc(w.id)}')" title="从行情移除">×</button>
+      <div class="mc-head">
+        <div class="mc-icon">${thumb ? `<img src="${esc(thumb)}" alt="">` : w.symbol.charAt(0)}</div>
+        <div>
+          <div class="mc-name">${esc(w.name)}</div>
+          <div class="mc-ticker">${esc(w.symbol)}${inPort ? ' <span style="color:var(--blue)">●</span>' : ''}</div>
+        </div>
+      </div>
+      <div class="mc-price num">${price || '<span class="loading-price"></span>'}</div>
+      <div class="mc-change ${chg == null ? '' : chg >= 0 ? 'green' : 'red'}">${chg != null ? fmtPct(chg) + ' 24h' : ''}</div>
+    </div>`;
+  }).join('');
+  grid.innerHTML = cards + `<button class="market-card-add" onclick="openWatchlistAdd()"><span style="font-size:22px">＋</span><span>添加币种</span></button>`;
+}
+
+function removeFromWatchlist(e, id) {
+  e.stopPropagation();
+  watchlist = watchlist.filter(w => w.id !== id);
+  saveWatchlist();
+  renderAll();
+}
+
+function openWatchlistAdd() {
+  document.getElementById('wl-search-input').value = '';
+  document.getElementById('wl-search-results').innerHTML = '';
+  document.getElementById('watchlist-modal').classList.add('open');
+  setTimeout(() => document.getElementById('wl-search-input').focus(), 80);
+}
+
+let wlSearchTimer = null;
+function onWlSearch(val) {
+  clearTimeout(wlSearchTimer);
+  const box = document.getElementById('wl-search-results');
+  if (!val.trim()) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px">搜索中…</div>';
+  wlSearchTimer = setTimeout(() => searchCoins(val, 'wl-search-results', coin => {
+    if (watchlist.find(w => w.id === coin.id)) {
+      alert(coin.name + ' 已在行情列表中');
+      return;
+    }
+    watchlist.push({ id: coin.id, name: coin.name, symbol: coin.symbol });
+    saveWatchlist();
+    closeModal('watchlist-modal');
+    refreshAll(true);
+  }), 300);
+}
+
+function renderSummary(holdings) {
+  let cost = 0, value = 0;
+  for (const h of holdings) {
+    cost += h.totalBuyCost;
+    const p = priceCache[h.coinId];
+    if (p) value += h.netQty * p.usd;
+  }
+  const pnl = value - cost;
+  const pnlPct = cost > 0 ? (pnl / cost) * 100 : 0;
+  document.getElementById('s-cost').textContent = fmt(cost);
+  document.getElementById('s-value').textContent = holdings.length && !value ? '加载中…' : fmt(value);
+  document.getElementById('s-coins').textContent = holdings.length;
+  const pEl = document.getElementById('s-pnl');
+  const ppEl = document.getElementById('s-pnl-pct');
+  if (value) {
+    pEl.textContent = (pnl >= 0 ? '+' : '-') + fmt(Math.abs(pnl));
+    pEl.className = 'val ' + (pnl >= 0 ? 'green' : 'red');
+    ppEl.textContent = fmtPct(pnlPct);
+    ppEl.className = 'sub ' + (pnl >= 0 ? 'green' : 'red');
+  } else { pEl.textContent = '—'; pEl.className = 'val'; ppEl.textContent = '等待价格'; ppEl.className = 'sub'; }
+}
+
+function renderHoldings(holdings) {
+  const empty = document.getElementById('holdings-empty');
+  const table = document.getElementById('holdings-table');
+  const tbody = document.getElementById('holdings-body');
+  if (!holdings.length) { empty.style.display = ''; table.style.display = 'none'; return; }
+  empty.style.display = 'none'; table.style.display = '';
+  tbody.innerHTML = '';
+  for (const h of holdings) {
+    const p = priceCache[h.coinId];
+    const avgCost = h.totalBuyQty ? h.totalBuyCost / h.totalBuyQty : 0;
+    const curPrice = p ? p.usd : null;
+    const value = curPrice ? h.netQty * curPrice : null;
+    const pnl = value != null ? value - (h.netQty * avgCost) : null;
+    const pnlPct = pnl != null && avgCost ? (pnl / (h.netQty * avgCost)) * 100 : null;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="coin-cell">
+        <div class="coin-icon">${(p?.thumb) ? `<img src="${p.thumb}" alt="">` : h.symbol.charAt(0).toUpperCase()}</div>
+        <div><div class="coin-name">${esc(h.name)}</div><div class="coin-tick">${esc(h.symbol.toUpperCase())}</div></div>
+      </div></td>
+      <td class="num">${fmtQty(h.netQty)} <span style="color:var(--muted);font-size:11px">${esc(h.symbol.toUpperCase())}</span></td>
+      <td class="num">${fmt(avgCost, avgCost < 1 ? 5 : 2)}</td>
+      <td class="num">${curPrice == null ? '<span class="loading-price"></span>' : fmt(curPrice, curPrice < 1 ? 5 : 2) + (p?.change24h != null ? `<br><span style="font-size:10px" class="${p.change24h>=0?'green':'red'}">${fmtPct(p.change24h)} 24h</span>` : '')}</td>
+      <td class="num">${value != null ? fmt(value) : '<span class="loading-price"></span>'}</td>
+      <td class="num ${pnl != null ? (pnl >= 0 ? 'green' : 'red') : ''}">${pnl != null ? (pnl >= 0 ? '+' : '-') + fmt(Math.abs(pnl)) : '<span class="loading-price"></span>'}</td>
+      <td>${pnlPct != null ? `<span class="pnl-badge ${pnlPct >= 0 ? 'pos' : 'neg'}">${fmtPct(pnlPct)}</span>` : '<span class="loading-price"></span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="action-btn" onclick="quickAddCoin('${h.coinId}','${esc(h.name)}','${h.symbol}')">+买入</button>
+        <button class="action-btn danger" onclick="deleteCoin('${h.coinId}')" style="margin-left:4px">删除</button>
+      </td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderTxList(holdings) {
+  const wrap = document.getElementById('tx-list');
+  wrap.innerHTML = '';
+  if (!holdings.length) return;
+  for (const h of holdings) {
+    const sorted = [...h.txs].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sect = document.createElement('div');
+    sect.className = 'tx-section';
+    const thumb = priceCache[h.coinId]?.thumb || h.thumb;
+    sect.innerHTML = `<details>
+      <summary>
+        ${thumb ? `<img src="${thumb}" style="width:20px;height:20px;border-radius:50%;vertical-align:middle">` : ''}
+        ${esc(h.name)}
+        <span style="color:var(--muted);font-weight:400;font-size:12px">${sorted.length} 笔</span>
+      </summary>
+      <div class="tx-inner">
+        <table>
+          <thead><tr><th>日期</th><th>类型</th><th>买入单价</th><th>数量</th><th>总花费</th><th>备注</th><th></th></tr></thead>
+          <tbody>${sorted.map(tx => `
+            <tr class="${tx.type==='sell'?'sell-row':''}">
+              <td>${tx.date||'—'}</td>
+              <td>${tx.type==='sell'?'<span class="sell-badge">卖出</span>':'<span class="buy-badge">买入</span>'}</td>
+              <td class="num">${fmt(tx.price, tx.price<1?5:2)}</td>
+              <td class="num">${fmtQty(tx.qty)} <span style="color:var(--muted);font-size:11px">${esc(h.symbol.toUpperCase())}</span></td>
+              <td class="num">${fmt(tx.cost)}</td>
+              <td style="color:var(--muted)">${esc(tx.note||'')}</td>
+              <td><button class="action-btn danger" onclick="deleteTx('${tx.id}')">删除</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </details>`;
+    wrap.appendChild(sect);
+  }
+}
+
+// ════════════════════════════════════════
+// Add Transaction Modal
+// ════════════════════════════════════════
+function openAddModal() {
+  selectedCoin = null;
+  document.getElementById('coin-search').value = '';
+  document.getElementById('selected-coin-hint').textContent = '';
+  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('f-price').value = '';
+  document.getElementById('f-qty').value = '';
+  document.getElementById('f-cost').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('f-type').value = 'buy';
+  document.getElementById('calc-hint').textContent = '填写单价 × 数量后自动计算';
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function quickAddCoin(id, name, symbol) {
+  openAddModal();
+  selectedCoin = { id, name, symbol, thumb: priceCache[id]?.thumb || '' };
+  document.getElementById('coin-search').value = name + ' (' + symbol.toUpperCase() + ')';
+  document.getElementById('selected-coin-hint').textContent = '✓ 已选择 ' + name;
+  document.getElementById('selected-coin-hint').style.color = 'var(--green)';
+  const p = priceCache[id];
+  if (p) document.getElementById('f-price').value = p.usd;
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.getElementById('add-modal').addEventListener('click', e => { if (e.target === document.getElementById('add-modal')) closeModal('add-modal'); });
+document.getElementById('excel-modal').addEventListener('click', e => { if (e.target === document.getElementById('excel-modal')) { closeModal('excel-modal'); resetExcelModal(); } });
+document.getElementById('watchlist-modal').addEventListener('click', e => { if (e.target === document.getElementById('watchlist-modal')) closeModal('watchlist-modal'); });
+
+function calcTotal() {
+  const price = parseFloat(document.getElementById('f-price').value);
+  const qty = parseFloat(document.getElementById('f-qty').value);
+  if (!isNaN(price) && !isNaN(qty)) {
+    document.getElementById('f-cost').value = (price * qty).toFixed(2);
+    document.getElementById('calc-hint').textContent = `单价 × 数量 = $${(price * qty).toFixed(2)}`;
+  }
+}
+function calcFromCost() {
+  const cost = parseFloat(document.getElementById('f-cost').value);
+  const qty = parseFloat(document.getElementById('f-qty').value);
+  if (!isNaN(cost) && !isNaN(qty) && qty > 0) {
+    document.getElementById('f-price').value = (cost / qty).toFixed(8);
+    document.getElementById('calc-hint').textContent = `推算单价: $${(cost / qty).toFixed(6)}`;
+  }
+}
+function saveTx() {
+  if (!selectedCoin) { alert('请先搜索并选择一个币种'); return; }
+  const qty = parseFloat(document.getElementById('f-qty').value);
+  const cost = parseFloat(document.getElementById('f-cost').value);
+  const price = parseFloat(document.getElementById('f-price').value);
+  if (isNaN(qty) || qty <= 0) { alert('请填写正确的买入数量'); return; }
+  if (isNaN(cost) || cost <= 0) { alert('请填写总花费'); return; }
+  db.txs.push({
+    id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    coinId: selectedCoin.id, name: selectedCoin.name, symbol: selectedCoin.symbol, thumb: selectedCoin.thumb || '',
+    date: document.getElementById('f-date').value,
+    type: document.getElementById('f-type').value,
+    price: isNaN(price) ? cost / qty : price,
+    qty, cost,
+    note: document.getElementById('f-note').value.trim(),
+  });
+  save();
+  closeModal('add-modal');
+  refreshAll(true);
+}
+
+// ════════════════════════════════════════
+// Coin search (CoinGecko)
+// ════════════════════════════════════════
+function onCoinSearch(val) {
+  clearTimeout(searchTimer);
+  if (val.length < 1) { document.getElementById('search-results').style.display = 'none'; return; }
+  searchTimer = setTimeout(() => searchCoins(val, 'search-results', c => { selectedCoin = c; document.getElementById('coin-search').value = c.name + ' (' + c.symbol.toUpperCase() + ')'; const hint = document.getElementById('selected-coin-hint'); hint.textContent = '✓ ' + c.name; hint.style.color = 'var(--green)'; const p = priceCache[c.id]; if (p && !document.getElementById('f-price').value) document.getElementById('f-price').value = p.usd; }), 300);
+}
+function onXlCoinSearch(val) {
+  clearTimeout(xlSearchTimer);
+  if (val.length < 1) { document.getElementById('xl-search-results').style.display = 'none'; return; }
+  xlSearchTimer = setTimeout(() => searchCoins(val, 'xl-search-results', c => { xlSelectedCoin = c; document.getElementById('xl-coin-search').value = c.name + ' (' + c.symbol.toUpperCase() + ')'; const hint = document.getElementById('xl-coin-hint'); hint.textContent = '✓ ' + c.name + ' (ID: ' + c.id + ')'; hint.style.color = 'var(--green)'; }), 300);
+}
+
+async function searchCoins(q, resultsId, onSelect) {
+  const box = document.getElementById(resultsId);
+  box.style.display = 'block';
+  box.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px">搜索中…</div>';
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`);
+    const { coins } = await res.json();
+    const top = (coins || []).slice(0, 8);
+    if (!top.length) { box.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px">无结果</div>'; return; }
+    box.innerHTML = top.map(c => `
+      <div class="search-item" data-id="${esc(c.id)}" data-name="${esc(c.name)}" data-symbol="${esc(c.symbol)}" data-thumb="${esc(c.thumb||'')}">
+        <img src="${esc(c.thumb||'')}" alt="" onerror="this.style.display='none'">
+        <div><div class="si-name">${esc(c.name)}</div><div class="si-id">${esc(c.id)}</div></div>
+        <span class="si-tick">${esc(c.symbol.toUpperCase())}</span>
+      </div>`).join('');
+    box.querySelectorAll('.search-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const coin = { id: el.dataset.id, name: el.dataset.name, symbol: el.dataset.symbol, thumb: el.dataset.thumb };
+        box.style.display = 'none';
+        onSelect(coin);
+      });
+    });
+  } catch {
+    box.innerHTML = `<div style="padding:10px;color:var(--red);font-size:12px">搜索失败（需翻墙）<br>
+      <span onclick="manualCoin('${esc(q)}','${resultsId}',arguments[0])" style="cursor:pointer;color:var(--blue)">手动使用「${esc(q)}」</span></div>`;
+    box.querySelector('span')?.addEventListener('click', (e) => {
+      const coin = { id: q.toLowerCase().trim(), name: q, symbol: q.toUpperCase().slice(0,5), thumb: '' };
+      box.style.display = 'none';
+      onSelect(coin);
+    });
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    ['search-results', 'xl-search-results', 'wl-search-results'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+});
+
+// ════════════════════════════════════════
+// Excel Import
+// ════════════════════════════════════════
+function openExcelModal() {
+  resetExcelModal();
+  document.getElementById('excel-modal').classList.add('open');
+}
+function resetExcelModal() {
+  xlSelectedCoin = null; xlRawRows = []; xlHeaders = []; pendingImport = [];
+  document.getElementById('xl-step1').style.display = '';
+  document.getElementById('xl-step2').style.display = 'none';
+  document.getElementById('xl-back-btn').style.display = 'none';
+  document.getElementById('xl-confirm-btn').style.display = 'none';
+  document.getElementById('xl-preview').style.display = 'none';
+  document.getElementById('xl-coin-search').value = '';
+  document.getElementById('xl-coin-hint').textContent = '';
+  document.getElementById('drop-zone').classList.remove('drag');
+  // Reset currency selectors
+  document.getElementById('xl-cost-ccy').value = 'CNY';
+  document.getElementById('xl-cost-rate').value = '';
+  document.getElementById('cost-rate-hint').textContent = '花费 ÷ 汇率 → USD';
+  document.getElementById('cost-rate-hint').style.color = '';
+  document.getElementById('xl-price-ccy').value = 'USD';
+  document.getElementById('xl-price-rate').value = '';
+  document.getElementById('price-rate-hint').textContent = '单价 ÷ 汇率 → USD';
+  document.getElementById('price-rate-hint').style.color = '';
+  onCostCcyChange();
+  onPriceCcyChange();
+}
+function xlBack() {
+  document.getElementById('xl-step1').style.display = '';
+  document.getElementById('xl-step2').style.display = 'none';
+  document.getElementById('xl-back-btn').style.display = 'none';
+  document.getElementById('xl-confirm-btn').style.display = 'none';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) parseExcel(file);
+}
+
+function parseExcel(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Find header row (first row with more than 2 non-empty cells)
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(5, raw.length); i++) {
+        if (raw[i].filter(c => c !== '' && c != null).length >= 2) { headerIdx = i; break; }
+      }
+      xlHeaders = raw[headerIdx].map((h, i) => h !== '' ? String(h) : `列${i+1}`);
+      xlRawRows = raw.slice(headerIdx + 1).filter(r => r.some(c => c !== '' && c != null));
+
+      document.getElementById('xl-filename').textContent = file.name;
+      document.getElementById('xl-rowcount').textContent = xlRawRows.length;
+
+      // Populate column selectors
+      const none = '<option value="">— 不选 —</option>';
+      const opts = xlHeaders.map((h, i) => `<option value="${i}">${esc(h)}</option>`).join('');
+      ['xl-col-date','xl-col-cost','xl-col-qty'].forEach(id => { document.getElementById(id).innerHTML = opts; });
+      document.getElementById('xl-col-price').innerHTML = none + opts;
+
+      // Auto-detect columns by common names
+      autoMapColumns(xlHeaders);
+
+      // Auto-detect coin from filename
+      autoDetectCoin(file.name);
+
+      document.getElementById('xl-step1').style.display = 'none';
+      document.getElementById('xl-step2').style.display = '';
+      document.getElementById('xl-back-btn').style.display = '';
+    } catch (err) {
+      alert('文件解析失败：' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function autoMapColumns(headers) {
+  const dateKeys = ['日期','date','time','时间','datetime'];
+  const costKeys = ['花费','成本','cost','金额','总额','amount','spend','总花费','usdt'];
+  const qtyKeys = ['个数','数量','qty','quantity','amount','数'];
+  const priceKeys = ['单价','价格','price','unit'];
+  function findIdx(keys) {
+    for (const k of keys) for (let i = 0; i < headers.length; i++) if (headers[i].toLowerCase().includes(k.toLowerCase())) return i;
+    return 0;
+  }
+  document.getElementById('xl-col-date').value = findIdx(dateKeys);
+  document.getElementById('xl-col-cost').value = findIdx(costKeys);
+  document.getElementById('xl-col-qty').value = findIdx(qtyKeys);
+  const pi = findIdx(priceKeys);
+  document.getElementById('xl-col-price').value = pi === 0 ? '' : pi; // only set if clearly found
+}
+
+function autoDetectCoin(filename) {
+  const name = filename.replace(/\.[^.]+$/, '').toUpperCase();
+  const known = { BTC: { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' }, ETH: { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' }, ADA: { id: 'cardano', name: 'Cardano', symbol: 'ADA' }, SOL: { id: 'solana', name: 'Solana', symbol: 'SOL' }, XRP: { id: 'ripple', name: 'XRP', symbol: 'XRP' }, BNB: { id: 'binancecoin', name: 'BNB', symbol: 'BNB' }, DOGE: { id: 'dogecoin', name: 'Dogecoin', symbol: 'DOGE' }, AVAX: { id: 'avalanche-2', name: 'Avalanche', symbol: 'AVAX' } };
+  for (const [sym, coin] of Object.entries(known)) {
+    if (name.includes(sym)) {
+      xlSelectedCoin = coin;
+      document.getElementById('xl-coin-search').value = coin.name + ' (' + coin.symbol + ')';
+      document.getElementById('xl-coin-hint').textContent = '✓ 自动识别：' + coin.name;
+      document.getElementById('xl-coin-hint').style.color = 'var(--green)';
+      return;
+    }
+  }
+}
+
+// ════════════════════════════════════════
+// Currency helpers
+// ════════════════════════════════════════
+const CCY_DEFAULTS = { CNY: 7.25, HKD: 7.78, EUR: 0.92, GBP: 0.79, USD: 1 };
+let cachedRates = null; // fetched once per session
+
+function toggleRateRow(rowId, labelId, rateId, ccy) {
+  const row = document.getElementById(rowId);
+  if (ccy === 'USD') {
+    row.style.display = 'none';
+  } else {
+    row.style.display = 'flex';
+    document.getElementById(labelId).textContent = ccy;
+    if (!document.getElementById(rateId).value)
+      document.getElementById(rateId).value = CCY_DEFAULTS[ccy] || '';
+  }
+}
+
+function onCostCcyChange() {
+  toggleRateRow('cost-rate-row', 'cost-ccy-label', 'xl-cost-rate',
+    document.getElementById('xl-cost-ccy').value);
+}
+function onPriceCcyChange() {
+  toggleRateRow('price-rate-row', 'price-ccy-label', 'xl-price-rate',
+    document.getElementById('xl-price-ccy').value);
+}
+
+async function fetchRate(which) {
+  const ccyEl = which === 'cost' ? 'xl-cost-ccy' : 'xl-price-ccy';
+  const rateEl = which === 'cost' ? 'xl-cost-rate' : 'xl-price-rate';
+  const hintEl = which === 'cost' ? 'cost-rate-hint' : 'price-rate-hint';
+  const ccy = document.getElementById(ccyEl).value;
+  if (ccy === 'USD') return;
+
+  const hint = document.getElementById(hintEl);
+  hint.textContent = '获取中…'; hint.style.color = 'var(--muted)';
+  try {
+    if (!cachedRates) {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      cachedRates = (await res.json()).rates;
+    }
+    const rate = cachedRates?.[ccy];
+    if (!rate) throw new Error('未找到该货币');
+    document.getElementById(rateEl).value = rate.toFixed(4);
+    hint.textContent = `实时：1 USD = ${rate.toFixed(4)} ${ccy}`;
+    hint.style.color = 'var(--green)';
+  } catch (e) {
+    hint.textContent = '获取失败，请手动填写';
+    hint.style.color = 'var(--red)';
+  }
+}
+
+function getRate(ccyElId, rateElId) {
+  const ccy = document.getElementById(ccyElId).value;
+  if (ccy === 'USD') return 1;
+  return parseFloat(document.getElementById(rateElId).value) || CCY_DEFAULTS[ccy] || 1;
+}
+
+function previewImport() {
+  if (!xlSelectedCoin) { alert('请先选择币种'); return; }
+  const di = parseInt(document.getElementById('xl-col-date').value);
+  const ci = parseInt(document.getElementById('xl-col-cost').value);
+  const qi = parseInt(document.getElementById('xl-col-qty').value);
+  const piVal = document.getElementById('xl-col-price').value;
+  const pi = piVal !== '' ? parseInt(piVal) : -1;
+  const skipNeg = document.getElementById('xl-skip-neg').checked;
+  const skipBad = document.getElementById('xl-skip-bad').checked;
+
+  const costCcy = document.getElementById('xl-cost-ccy').value;
+  const priceCcy = document.getElementById('xl-price-ccy').value;
+  const costRate = getRate('xl-cost-ccy', 'xl-cost-rate');   // 1 USD = ? costCcy
+  const priceRate = getRate('xl-price-ccy', 'xl-price-rate'); // 1 USD = ? priceCcy
+
+  pendingImport = [];
+  let skipped = 0;
+
+  for (const row of xlRawRows) {
+    const rawDate = row[di];
+    const rawCost = row[ci];
+    const rawQty  = row[qi];
+    const rawPrice = pi >= 0 ? row[pi] : null;
+
+    // Parse date
+    let dateStr = '';
+    if (rawDate instanceof Date) {
+      dateStr = rawDate.toISOString().slice(0, 10);
+    } else if (rawDate) {
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) dateStr = d.toISOString().slice(0, 10);
+      else if (String(rawDate).match(/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/)) dateStr = String(rawDate).slice(0,10).replace(/\//g,'-');
+    }
+
+    const rawCostNum = parseFloat(String(rawCost).replace(/[,$¥￥]/g, ''));
+    const qty        = parseFloat(String(rawQty).replace(/[,$¥￥]/g, ''));
+    const costUSD    = isNaN(rawCostNum) ? NaN : rawCostNum / costRate;
+
+    let price = pi >= 0 ? parseFloat(String(rawPrice).replace(/[,$¥￥]/g, '')) : NaN;
+    if (!isNaN(price)) price = price / priceRate; // convert price column to USD
+    if (isNaN(price) && !isNaN(costUSD) && !isNaN(qty) && qty !== 0) price = Math.abs(costUSD / qty);
+
+    if (skipBad && (!dateStr || isNaN(rawCostNum) || isNaN(qty))) { skipped++; continue; }
+    if (skipNeg && (rawCostNum < 0 || qty < 0)) { skipped++; continue; }
+
+    const type = rawCostNum < 0 || qty < 0 ? 'sell' : 'buy';
+    const noteparts = [];
+    if (costCcy !== 'USD') noteparts.push(`花费原值: ${costCcy} ${Math.abs(rawCostNum).toFixed(2)}`);
+    pendingImport.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '_' + pendingImport.length,
+      coinId: xlSelectedCoin.id, name: xlSelectedCoin.name, symbol: xlSelectedCoin.symbol,
+      thumb: xlSelectedCoin.thumb || priceCache[xlSelectedCoin.id]?.thumb || '',
+      date: dateStr, type,
+      price: Math.abs(price) || 0,
+      qty:   Math.abs(qty)   || 0,
+      cost:  Math.abs(costUSD) || 0,
+      costOrig: Math.abs(rawCostNum) || 0,
+      costCcy,
+      note: noteparts.join(' | '),
+    });
+  }
+
+  const buys  = pendingImport.filter(t => t.type === 'buy').length;
+  const sells = pendingImport.filter(t => t.type === 'sell').length;
+  const ccyInfo = [
+    costCcy  !== 'USD' ? `花费 ${costCcy}→USD ÷${costRate}`   : '',
+    priceCcy !== 'USD' ? `单价 ${priceCcy}→USD ÷${priceRate}` : '',
+  ].filter(Boolean).join('　');
+  document.getElementById('xl-stat').innerHTML =
+    `导入: <span>${pendingImport.length} 条</span>&nbsp;&nbsp;` +
+    `买入: <span class="green">${buys}</span>&nbsp;&nbsp;` +
+    `卖出: <span class="red">${sells}</span>&nbsp;&nbsp;` +
+    `跳过: <span>${skipped}</span>` +
+    (ccyInfo ? `&nbsp;&nbsp;<span style="color:var(--blue)">${ccyInfo}</span>` : '');
+
+  const showOrigCost = costCcy !== 'USD';
+  const colSpan = 5 + (showOrigCost ? 1 : 0);
+  const preview = document.getElementById('xl-preview-table');
+  preview.innerHTML = `<table>
+    <thead><tr>
+      <th>日期</th><th>类型</th><th>单价 (USD)</th><th>数量</th>
+      <th>花费 (USD${showOrigCost ? '≈' : ''})</th>
+      ${showOrigCost ? `<th>原始 (${costCcy})</th>` : ''}
+    </tr></thead>
+    <tbody>${pendingImport.slice(0, 10).map(t => `
+      <tr class="${t.type==='sell'?'sell-row':''}">
+        <td>${t.date||'—'}</td>
+        <td>${t.type==='sell'?'<span class="sell-badge">卖出</span>':'<span class="buy-badge">买入</span>'}</td>
+        <td class="num">${fmt(t.price, t.price < 1 ? 5 : 2)}</td>
+        <td class="num">${fmtQty(t.qty)}</td>
+        <td class="num">${fmt(t.cost)}</td>
+        ${showOrigCost ? `<td class="num" style="color:var(--muted)">${costCcy} ${t.costOrig?.toFixed(2)||'—'}</td>` : ''}
+      </tr>`).join('')}
+    ${pendingImport.length > 10 ? `<tr><td colspan="${colSpan}" style="text-align:center;color:var(--muted);padding:8px">… 仅显示前 10 条，共 ${pendingImport.length} 条</td></tr>` : ''}
+    </tbody></table>`;
+
+  document.getElementById('xl-preview').style.display = '';
+  document.getElementById('xl-confirm-btn').style.display = pendingImport.length > 0 ? '' : 'none';
+}
+
+function confirmExcelImport() {
+  if (!pendingImport.length) { alert('没有可导入的数据，请先点击"预览"'); return; }
+  db.txs.push(...pendingImport);
+  save();
+  closeModal('excel-modal');
+  resetExcelModal();
+  refreshAll(true);
+  alert(`✅ 成功导入 ${pendingImport.length} 条记录！`);
+}
+
+// ════════════════════════════════════════
+// Delete
+// ════════════════════════════════════════
+function deleteTx(id) {
+  if (!confirm('删除这条记录？')) return;
+  db.txs = db.txs.filter(t => t.id !== id);
+  save(); renderAll();
+}
+function deleteCoin(coinId) {
+  const h = getHoldings().find(h => h.coinId === coinId);
+  if (!h) return;
+  if (!confirm(`删除 ${h.name} 的全部 ${h.txs.length} 条记录？`)) return;
+  db.txs = db.txs.filter(t => t.coinId !== coinId);
+  save(); renderAll();
+}
+
+// ════════════════════════════════════════
+// Backup import / export
+// ════════════════════════════════════════
+function exportData() {
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'crypto-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function importBackup(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.txs || !Array.isArray(parsed.txs)) throw new Error('格式不正确');
+      if (!confirm(`导入 ${parsed.txs.length} 条记录？将替换当前数据。`)) return;
+      db = parsed; save(); refreshAll(true); alert('导入成功！');
+    } catch (err) { alert('导入失败：' + err.message); }
+  };
+  reader.readAsText(file); input.value = '';
+}
+
+// ════════════════════════════════════════
+// Theme
+// ════════════════════════════════════════
+function applyTheme(light) {
+  document.documentElement.classList.toggle('light', light);
+}
+function toggleTheme() {
+  const isLight = !document.documentElement.classList.contains('light');
+  applyTheme(isLight);
+  localStorage.setItem('ct_theme', isLight ? 'light' : 'dark');
+}
+// Load saved theme on startup
+applyTheme(localStorage.getItem('ct_theme') === 'light');
+
+// ════════════════════════════════════════
+// Boot
+// ════════════════════════════════════════
+renderAll();
+setStatus('stale', '初始化中…');
+refreshAll(false);
+scheduleRefresh();
+</script>
+</body>
+</html>
