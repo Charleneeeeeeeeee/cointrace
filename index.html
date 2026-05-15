@@ -339,6 +339,15 @@ html.light .chart-card { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 .sell-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; background: rgba(239,68,68,.12); color: #f87171; }
 .buy-badge  { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; background: rgba(34,197,94,.12); color: #4ade80; }
 
+.lang-select {
+  background: var(--card2); border: 1px solid var(--border-light);
+  color: var(--text); padding: 6px 10px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; cursor: pointer; outline: none;
+  transition: border-color .15s;
+}
+.lang-select:focus, .lang-select:hover { border-color: var(--blue); }
+html.light .lang-select { background: #fff; }
+
 /* ── Theme toggle button ── */
 .theme-btn {
   width: 38px; height: 22px; border-radius: 11px;
@@ -414,7 +423,21 @@ html.light .logo-text .name {
       <label class="btn btn-outline" style="cursor:pointer"><span id="btn-import-backup">↑ 导入备份</span><input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label>
       <button class="btn btn-green" id="btn-import-excel" onclick="openExcelModal()">📊 导入 Excel</button>
       <button class="btn btn-primary" id="btn-add" onclick="openAddModal()">＋ 手动添加</button>
-      <button class="btn btn-outline" id="lang-btn" onclick="toggleLang()" style="min-width:38px;font-size:12px;font-weight:700;letter-spacing:.5px">EN</button>
+      <select id="lang-select" class="lang-select" onchange="changeLang(this.value)">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="ko">한국어</option>
+        <option value="ru">Русский</option>
+        <option value="tr">Türkçe</option>
+        <option value="vi">Tiếng Việt</option>
+        <option value="pt">Português</option>
+        <option value="es">Español</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+        <option value="id">Indonesia</option>
+        <option value="ar">العربية</option>
+      </select>
       <div class="theme-wrap" onclick="toggleTheme()" title="切换日/夜模式" style="cursor:pointer">
         <span id="theme-icon-moon">🌙</span>
         <button class="theme-btn" tabindex="-1"></button>
@@ -809,19 +832,14 @@ const LANGS = {
     empty:'还没有持仓记录<br>点击右上角「导入 Excel」或「手动添加」开始',
     modal_title:'添加交易记录', modal_coin:'搜索币种',
     modal_date:'日期', modal_type:'类型', modal_qty:'数量', modal_note:'备注（选填）',
-    opt_buy:'买入', opt_sell:'卖出',
-    btn_cancel:'取消', btn_save:'保存',
+    opt_buy:'买入', opt_sell:'卖出', btn_cancel:'取消', btn_save:'保存',
     btn_buy:'+买入', btn_sell:'−卖出', btn_delete:'删除',
-    status_live:'实时', status_updating:'更新中…', status_init:'初始化中…',
-    status_error:'获取失败（需翻墙）',
+    status_live:'实时', status_updating:'更新中…', status_init:'初始化中…', status_error:'获取失败（需翻墙）',
     loading:'加载中…', waiting:'等待价格',
     locked_profit:'已锁定利润', locked_loss:'已锁定亏损', from_sells:'历史卖出',
-    tx_count: n => `${n} 笔`,
-    realized_tag:'已实现',
-    market_time: t => `更新于 ${t}`,
+    tx_count:n=>`${n} 笔`, realized_tag:'已实现', market_time:t=>`更新于 ${t}`,
     buy_price:'买入单价 (USD)', sell_price:'卖出单价 (USD)',
-    total_cost:'总花费 (USD)', proceeds:'卖出所得 (USD)',
-    calc_hint:'填写单价 × 数量后自动计算',
+    total_cost:'总花费 (USD)', proceeds:'卖出所得 (USD)', calc_hint:'填写单价 × 数量后自动计算',
   },
   en: {
     tagline:'Track every position · Cold wallet friendly',
@@ -840,20 +858,301 @@ const LANGS = {
     empty:'No holdings yet<br>Click "Import Excel" or "Add" to get started',
     modal_title:'Add Transaction', modal_coin:'Search coin',
     modal_date:'Date', modal_type:'Type', modal_qty:'Quantity', modal_note:'Note (optional)',
-    opt_buy:'Buy', opt_sell:'Sell',
-    btn_cancel:'Cancel', btn_save:'Save',
+    opt_buy:'Buy', opt_sell:'Sell', btn_cancel:'Cancel', btn_save:'Save',
     btn_buy:'+Buy', btn_sell:'−Sell', btn_delete:'Delete',
-    status_live:'Live', status_updating:'Updating…', status_init:'Initializing…',
-    status_error:'Failed (VPN needed)',
+    status_live:'Live', status_updating:'Updating…', status_init:'Initializing…', status_error:'Failed (VPN needed)',
     loading:'Loading…', waiting:'Waiting for prices',
     locked_profit:'Locked profit', locked_loss:'Locked loss', from_sells:'From sells',
-    tx_count: n => `${n} tx`,
-    realized_tag:'Realized',
-    market_time: t => `Updated ${t}`,
+    tx_count:n=>`${n} tx`, realized_tag:'Realized', market_time:t=>`Updated ${t}`,
     buy_price:'Buy Price (USD)', sell_price:'Sell Price (USD)',
-    total_cost:'Total Cost (USD)', proceeds:'Proceeds (USD)',
-    calc_hint:'Auto-calculated from price × qty',
-  }
+    total_cost:'Total Cost (USD)', proceeds:'Proceeds (USD)', calc_hint:'Auto-calculated: price × qty',
+  },
+  ja: {
+    tagline:'すべてのポジションを追跡 · コールドウォレット対応',
+    btn_export:'↓ エクスポート', btn_import_backup:'↑ バックアップ読込',
+    btn_import_excel:'📊 Excel読込', btn_add:'＋ 追加',
+    st_market:'市場価格', st_charts:'チャート', st_holdings:'ポートフォリオ',
+    st_closed:'決済済みポジション', st_tx:'取引履歴',
+    lbl_cost:'総投資額', sub_cost:'買付合計',
+    lbl_value:'時価評価額', lbl_pnl:'損益合計',
+    lbl_realized:'確定損益', lbl_coins:'保有銘柄数',
+    chart_alloc:'資産配分', chart_pnl:'未確定損益',
+    th_coin:'銘柄', th_qty:'保有数量', th_avg:'平均取得単価',
+    th_price:'現在価格', th_value:'評価額',
+    th_upnl:'未確定損益', th_pct:'損益率', th_realized:'確定損益',
+    th_c_coin:'銘柄', th_c_sold:'売却数量', th_c_avg:'平均単価', th_c_realized:'確定損益',
+    empty:'保有なし<br>「Excel読込」か「追加」でスタート',
+    modal_title:'取引を追加', modal_coin:'銘柄検索',
+    modal_date:'日付', modal_type:'種別', modal_qty:'数量', modal_note:'メモ（任意）',
+    opt_buy:'買い', opt_sell:'売り', btn_cancel:'キャンセル', btn_save:'保存',
+    btn_buy:'+買い', btn_sell:'−売り', btn_delete:'削除',
+    status_live:'リアルタイム', status_updating:'更新中…', status_init:'初期化中…', status_error:'取得失敗（VPN必要）',
+    loading:'読込中…', waiting:'価格待機中',
+    locked_profit:'確定利益', locked_loss:'確定損失', from_sells:'売却履歴',
+    tx_count:n=>`${n}件`, realized_tag:'確定', market_time:t=>`${t} 更新`,
+    buy_price:'買付単価 (USD)', sell_price:'売付単価 (USD)',
+    total_cost:'総購入額 (USD)', proceeds:'売却代金 (USD)', calc_hint:'単価 × 数量で自動計算',
+  },
+  ko: {
+    tagline:'모든 포지션 추적 · 콜드월렛도 OK',
+    btn_export:'↓ 내보내기', btn_import_backup:'↑ 백업 가져오기',
+    btn_import_excel:'📊 엑셀 가져오기', btn_add:'＋ 추가',
+    st_market:'시세', st_charts:'차트', st_holdings:'보유 현황',
+    st_closed:'청산 완료', st_tx:'거래 내역',
+    lbl_cost:'총 투자금', sub_cost:'매수 합계',
+    lbl_value:'평가금액', lbl_pnl:'총 손익',
+    lbl_realized:'실현 손익', lbl_coins:'보유 종목',
+    chart_alloc:'자산 배분', chart_pnl:'미실현 손익',
+    th_coin:'코인', th_qty:'보유수량', th_avg:'평균단가',
+    th_price:'현재가', th_value:'평가금액',
+    th_upnl:'미실현 손익', th_pct:'손익률', th_realized:'실현 손익',
+    th_c_coin:'코인', th_c_sold:'매도수량', th_c_avg:'평균단가', th_c_realized:'실현 손익',
+    empty:'보유 자산이 없습니다<br>엑셀 가져오기 또는 추가를 클릭하세요',
+    modal_title:'거래 추가', modal_coin:'코인 검색',
+    modal_date:'날짜', modal_type:'구분', modal_qty:'수량', modal_note:'메모 (선택)',
+    opt_buy:'매수', opt_sell:'매도', btn_cancel:'취소', btn_save:'저장',
+    btn_buy:'+매수', btn_sell:'−매도', btn_delete:'삭제',
+    status_live:'실시간', status_updating:'업데이트 중…', status_init:'초기화 중…', status_error:'시세 조회 실패',
+    loading:'로딩 중…', waiting:'시세 대기',
+    locked_profit:'실현이익', locked_loss:'실현손실', from_sells:'매도 내역',
+    tx_count:n=>`${n}건`, realized_tag:'실현', market_time:t=>`${t} 업데이트`,
+    buy_price:'매수가 (USD)', sell_price:'매도가 (USD)',
+    total_cost:'매수금액 (USD)', proceeds:'매도금액 (USD)', calc_hint:'단가 × 수량 자동 계산',
+  },
+  ru: {
+    tagline:'Отслеживайте каждую позицию · Холодный кошелёк — не проблема',
+    btn_export:'↓ Экспорт', btn_import_backup:'↑ Импорт резервной',
+    btn_import_excel:'📊 Импорт Excel', btn_add:'＋ Добавить',
+    st_market:'Рынок', st_charts:'Графики', st_holdings:'Портфель',
+    st_closed:'Закрытые позиции', st_tx:'История сделок',
+    lbl_cost:'Сумма вложений', sub_cost:'Все покупки',
+    lbl_value:'Рыночная стоимость', lbl_pnl:'Прибыль/убыток',
+    lbl_realized:'Реализованный П/У', lbl_coins:'Монет в портфеле',
+    chart_alloc:'Распределение', chart_pnl:'Нереализованный П/У',
+    th_coin:'Монета', th_qty:'Количество', th_avg:'Ср. цена покупки',
+    th_price:'Текущая цена', th_value:'Стоимость',
+    th_upnl:'Нереализованный П/У', th_pct:'П/У %', th_realized:'Реализованный',
+    th_c_coin:'Монета', th_c_sold:'Продано', th_c_avg:'Ср. цена', th_c_realized:'Реализованный П/У',
+    empty:'Нет активов<br>Импортируйте Excel или добавьте вручную',
+    modal_title:'Добавить сделку', modal_coin:'Поиск монеты',
+    modal_date:'Дата', modal_type:'Тип', modal_qty:'Количество', modal_note:'Заметка (необязательно)',
+    opt_buy:'Покупка', opt_sell:'Продажа', btn_cancel:'Отмена', btn_save:'Сохранить',
+    btn_buy:'+Купить', btn_sell:'−Продать', btn_delete:'Удалить',
+    status_live:'Онлайн', status_updating:'Обновление…', status_init:'Инициализация…', status_error:'Ошибка получения данных',
+    loading:'Загрузка…', waiting:'Ожидание цен',
+    locked_profit:'Зафиксир. прибыль', locked_loss:'Зафиксир. убыток', from_sells:'История продаж',
+    tx_count:n=>`${n} сделок`, realized_tag:'Реализован.', market_time:t=>`Обновлено ${t}`,
+    buy_price:'Цена покупки (USD)', sell_price:'Цена продажи (USD)',
+    total_cost:'Сумма покупки (USD)', proceeds:'Выручка (USD)', calc_hint:'Авторасчёт: цена × количество',
+  },
+  tr: {
+    tagline:'Her pozisyonu takip et · Soğuk cüzdan desteği',
+    btn_export:'↓ Dışa Aktar', btn_import_backup:'↑ Yedek Yükle',
+    btn_import_excel:'📊 Excel Yükle', btn_add:'＋ Ekle',
+    st_market:'Piyasa', st_charts:'Grafikler', st_holdings:'Portföy',
+    st_closed:'Kapatılan Pozisyonlar', st_tx:'İşlem Geçmişi',
+    lbl_cost:'Toplam Maliyet', sub_cost:'Tüm alımlar',
+    lbl_value:'Piyasa Değeri', lbl_pnl:'Toplam K/Z',
+    lbl_realized:'Gerçekleşen K/Z', lbl_coins:'Coin Sayısı',
+    chart_alloc:'Dağılım', chart_pnl:'Gerçekleşmemiş K/Z',
+    th_coin:'Coin', th_qty:'Net Miktar', th_avg:'Ort. Maliyet',
+    th_price:'Fiyat', th_value:'Değer',
+    th_upnl:'Gerçekleşmemiş K/Z', th_pct:'K/Z %', th_realized:'Gerçekleşen',
+    th_c_coin:'Coin', th_c_sold:'Satılan', th_c_avg:'Ort. Maliyet', th_c_realized:'Gerçekleşen K/Z',
+    empty:'Henüz varlık yok<br>Excel yükle veya manuel ekle',
+    modal_title:'İşlem Ekle', modal_coin:'Coin Ara',
+    modal_date:'Tarih', modal_type:'Tür', modal_qty:'Miktar', modal_note:'Not (isteğe bağlı)',
+    opt_buy:'Al', opt_sell:'Sat', btn_cancel:'İptal', btn_save:'Kaydet',
+    btn_buy:'+Al', btn_sell:'−Sat', btn_delete:'Sil',
+    status_live:'Canlı', status_updating:'Güncelleniyor…', status_init:'Başlatılıyor…', status_error:'Veri alınamadı',
+    loading:'Yükleniyor…', waiting:'Fiyat bekleniyor',
+    locked_profit:'Kilitli kâr', locked_loss:'Kilitli zarar', from_sells:'Satış geçmişi',
+    tx_count:n=>`${n} işlem`, realized_tag:'Gerçekleşen', market_time:t=>`Güncellendi ${t}`,
+    buy_price:'Alış Fiyatı (USD)', sell_price:'Satış Fiyatı (USD)',
+    total_cost:'Toplam Maliyet (USD)', proceeds:'Satış Geliri (USD)', calc_hint:'Fiyat × miktar otomatik hesaplanır',
+  },
+  vi: {
+    tagline:'Theo dõi mọi vị thế · Ví lạnh cũng quản lý được',
+    btn_export:'↓ Xuất', btn_import_backup:'↑ Nhập bản sao lưu',
+    btn_import_excel:'📊 Nhập Excel', btn_add:'＋ Thêm',
+    st_market:'Thị trường', st_charts:'Biểu đồ', st_holdings:'Danh mục',
+    st_closed:'Vị thế đóng', st_tx:'Lịch sử GD',
+    lbl_cost:'Tổng vốn đầu tư', sub_cost:'Tổng mua',
+    lbl_value:'Giá trị thị trường', lbl_pnl:'Tổng L/N',
+    lbl_realized:'L/N đã thực hiện', lbl_coins:'Số coin',
+    chart_alloc:'Phân bổ', chart_pnl:'L/N chưa thực hiện',
+    th_coin:'Coin', th_qty:'Số lượng', th_avg:'Giá trung bình',
+    th_price:'Giá hiện tại', th_value:'Giá trị',
+    th_upnl:'L/N chưa TH', th_pct:'L/N %', th_realized:'Đã TH',
+    th_c_coin:'Coin', th_c_sold:'Đã bán', th_c_avg:'Giá TB', th_c_realized:'L/N đã TH',
+    empty:'Chưa có danh mục<br>Nhập Excel hoặc thêm thủ công',
+    modal_title:'Thêm giao dịch', modal_coin:'Tìm coin',
+    modal_date:'Ngày', modal_type:'Loại', modal_qty:'Số lượng', modal_note:'Ghi chú (tùy chọn)',
+    opt_buy:'Mua', opt_sell:'Bán', btn_cancel:'Hủy', btn_save:'Lưu',
+    btn_buy:'+Mua', btn_sell:'−Bán', btn_delete:'Xóa',
+    status_live:'Trực tiếp', status_updating:'Đang cập nhật…', status_init:'Đang khởi tạo…', status_error:'Lỗi kết nối',
+    loading:'Đang tải…', waiting:'Chờ giá',
+    locked_profit:'Lợi nhuận đã chốt', locked_loss:'Lỗ đã chốt', from_sells:'Lịch sử bán',
+    tx_count:n=>`${n} GD`, realized_tag:'Đã TH', market_time:t=>`Cập nhật ${t}`,
+    buy_price:'Giá mua (USD)', sell_price:'Giá bán (USD)',
+    total_cost:'Tổng chi phí (USD)', proceeds:'Tiền thu về (USD)', calc_hint:'Tự động tính: giá × số lượng',
+  },
+  pt: {
+    tagline:'Rastreie cada posição · Carteira fria incluída',
+    btn_export:'↓ Exportar', btn_import_backup:'↑ Importar backup',
+    btn_import_excel:'📊 Importar Excel', btn_add:'＋ Adicionar',
+    st_market:'Mercado', st_charts:'Gráficos', st_holdings:'Carteira',
+    st_closed:'Posições fechadas', st_tx:'Histórico',
+    lbl_cost:'Custo total', sub_cost:'Total de compras',
+    lbl_value:'Valor de mercado', lbl_pnl:'L/P total',
+    lbl_realized:'L/P realizado', lbl_coins:'Criptos',
+    chart_alloc:'Distribuição', chart_pnl:'L/P não realizado',
+    th_coin:'Cripto', th_qty:'Qtd. líquida', th_avg:'Preço médio',
+    th_price:'Preço atual', th_value:'Valor',
+    th_upnl:'L/P não realizado', th_pct:'L/P %', th_realized:'Realizado',
+    th_c_coin:'Cripto', th_c_sold:'Vendido', th_c_avg:'Preço médio', th_c_realized:'L/P realizado',
+    empty:'Nenhum ativo ainda<br>Importe um Excel ou adicione manualmente',
+    modal_title:'Adicionar transação', modal_coin:'Buscar cripto',
+    modal_date:'Data', modal_type:'Tipo', modal_qty:'Quantidade', modal_note:'Nota (opcional)',
+    opt_buy:'Comprar', opt_sell:'Vender', btn_cancel:'Cancelar', btn_save:'Salvar',
+    btn_buy:'+Comprar', btn_sell:'−Vender', btn_delete:'Excluir',
+    status_live:'Ao vivo', status_updating:'Atualizando…', status_init:'Iniciando…', status_error:'Falha ao obter dados',
+    loading:'Carregando…', waiting:'Aguardando preços',
+    locked_profit:'Lucro realizado', locked_loss:'Prejuízo realizado', from_sells:'Histórico de vendas',
+    tx_count:n=>`${n} transações`, realized_tag:'Realizado', market_time:t=>`Atualizado ${t}`,
+    buy_price:'Preço de compra (USD)', sell_price:'Preço de venda (USD)',
+    total_cost:'Custo total (USD)', proceeds:'Receita de venda (USD)', calc_hint:'Calculado auto: preço × qtd.',
+  },
+  es: {
+    tagline:'Rastrea cada posición · Billetera fría incluida',
+    btn_export:'↓ Exportar', btn_import_backup:'↑ Importar copia',
+    btn_import_excel:'📊 Importar Excel', btn_add:'＋ Agregar',
+    st_market:'Mercado', st_charts:'Gráficos', st_holdings:'Portafolio',
+    st_closed:'Posiciones cerradas', st_tx:'Historial',
+    lbl_cost:'Costo total', sub_cost:'Total de compras',
+    lbl_value:'Valor de mercado', lbl_pnl:'P/G total',
+    lbl_realized:'P/G realizado', lbl_coins:'Criptos',
+    chart_alloc:'Distribución', chart_pnl:'P/G no realizado',
+    th_coin:'Cripto', th_qty:'Cantidad neta', th_avg:'Costo promedio',
+    th_price:'Precio actual', th_value:'Valor',
+    th_upnl:'P/G no realizado', th_pct:'P/G %', th_realized:'Realizado',
+    th_c_coin:'Cripto', th_c_sold:'Vendido', th_c_avg:'Costo prom.', th_c_realized:'P/G realizado',
+    empty:'Sin activos aún<br>Importa un Excel o agrega manualmente',
+    modal_title:'Agregar transacción', modal_coin:'Buscar cripto',
+    modal_date:'Fecha', modal_type:'Tipo', modal_qty:'Cantidad', modal_note:'Nota (opcional)',
+    opt_buy:'Comprar', opt_sell:'Vender', btn_cancel:'Cancelar', btn_save:'Guardar',
+    btn_buy:'+Comprar', btn_sell:'−Vender', btn_delete:'Eliminar',
+    status_live:'En vivo', status_updating:'Actualizando…', status_init:'Iniciando…', status_error:'Error al obtener datos',
+    loading:'Cargando…', waiting:'Esperando precios',
+    locked_profit:'Ganancia realizada', locked_loss:'Pérdida realizada', from_sells:'Historial de ventas',
+    tx_count:n=>`${n} transacciones`, realized_tag:'Realizado', market_time:t=>`Actualizado ${t}`,
+    buy_price:'Precio de compra (USD)', sell_price:'Precio de venta (USD)',
+    total_cost:'Costo total (USD)', proceeds:'Ingreso por venta (USD)', calc_hint:'Calculado auto: precio × cantidad',
+  },
+  de: {
+    tagline:'Jede Position verfolgen · Cold Wallet inklusive',
+    btn_export:'↓ Exportieren', btn_import_backup:'↑ Backup laden',
+    btn_import_excel:'📊 Excel importieren', btn_add:'＋ Hinzufügen',
+    st_market:'Markt', st_charts:'Diagramme', st_holdings:'Portfolio',
+    st_closed:'Geschlossene Positionen', st_tx:'Transaktionen',
+    lbl_cost:'Gesamtkosten', sub_cost:'Alle Käufe',
+    lbl_value:'Marktwert', lbl_pnl:'Gewinn/Verlust',
+    lbl_realized:'Realisierter G/V', lbl_coins:'Kryptos',
+    chart_alloc:'Aufteilung', chart_pnl:'Unrealisierter G/V',
+    th_coin:'Krypto', th_qty:'Menge', th_avg:'Ø Kaufpreis',
+    th_price:'Aktueller Preis', th_value:'Wert',
+    th_upnl:'Unrealisierter G/V', th_pct:'G/V %', th_realized:'Realisiert',
+    th_c_coin:'Krypto', th_c_sold:'Verkauft', th_c_avg:'Ø Kaufpreis', th_c_realized:'Realisierter G/V',
+    empty:'Noch keine Bestände<br>Excel importieren oder manuell hinzufügen',
+    modal_title:'Transaktion hinzufügen', modal_coin:'Krypto suchen',
+    modal_date:'Datum', modal_type:'Typ', modal_qty:'Menge', modal_note:'Notiz (optional)',
+    opt_buy:'Kaufen', opt_sell:'Verkaufen', btn_cancel:'Abbrechen', btn_save:'Speichern',
+    btn_buy:'+Kaufen', btn_sell:'−Verkaufen', btn_delete:'Löschen',
+    status_live:'Live', status_updating:'Aktualisiere…', status_init:'Initialisiere…', status_error:'Abruf fehlgeschlagen',
+    loading:'Laden…', waiting:'Warte auf Preise',
+    locked_profit:'Realisierter Gewinn', locked_loss:'Realisierter Verlust', from_sells:'Verkaufshistorie',
+    tx_count:n=>`${n} Transaktionen`, realized_tag:'Realisiert', market_time:t=>`Aktualisiert ${t}`,
+    buy_price:'Kaufpreis (USD)', sell_price:'Verkaufspreis (USD)',
+    total_cost:'Gesamtkosten (USD)', proceeds:'Verkaufserlös (USD)', calc_hint:'Automatisch: Preis × Menge',
+  },
+  fr: {
+    tagline:'Suivez chaque position · Portefeuille froid inclus',
+    btn_export:'↓ Exporter', btn_import_backup:'↑ Importer sauvegarde',
+    btn_import_excel:'📊 Importer Excel', btn_add:'＋ Ajouter',
+    st_market:'Marché', st_charts:'Graphiques', st_holdings:'Portefeuille',
+    st_closed:'Positions fermées', st_tx:'Historique',
+    lbl_cost:'Coût total', sub_cost:'Total des achats',
+    lbl_value:'Valeur marchande', lbl_pnl:'P/P total',
+    lbl_realized:'P/P réalisé', lbl_coins:'Cryptos',
+    chart_alloc:'Répartition', chart_pnl:'P/P non réalisé',
+    th_coin:'Crypto', th_qty:'Qté nette', th_avg:'Prix moyen',
+    th_price:'Prix actuel', th_value:'Valeur',
+    th_upnl:'P/P non réalisé', th_pct:'P/P %', th_realized:'Réalisé',
+    th_c_coin:'Crypto', th_c_sold:'Vendu', th_c_avg:'Prix moyen', th_c_realized:'P/P réalisé',
+    empty:'Aucun actif<br>Importez un Excel ou ajoutez manuellement',
+    modal_title:'Ajouter une transaction', modal_coin:'Rechercher une crypto',
+    modal_date:'Date', modal_type:'Type', modal_qty:'Quantité', modal_note:'Note (facultatif)',
+    opt_buy:'Acheter', opt_sell:'Vendre', btn_cancel:'Annuler', btn_save:'Enregistrer',
+    btn_buy:'+Acheter', btn_sell:'−Vendre', btn_delete:'Supprimer',
+    status_live:'En direct', status_updating:'Mise à jour…', status_init:'Initialisation…', status_error:'Échec de récupération',
+    loading:'Chargement…', waiting:'En attente des prix',
+    locked_profit:'Profit réalisé', locked_loss:'Perte réalisée', from_sells:'Historique des ventes',
+    tx_count:n=>`${n} transactions`, realized_tag:'Réalisé', market_time:t=>`Mis à jour ${t}`,
+    buy_price:"Prix d'achat (USD)", sell_price:'Prix de vente (USD)',
+    total_cost:'Coût total (USD)', proceeds:'Recette de vente (USD)', calc_hint:'Calculé auto : prix × quantité',
+  },
+  id: {
+    tagline:'Lacak setiap posisi · Dompet dingin pun bisa',
+    btn_export:'↓ Ekspor', btn_import_backup:'↑ Impor Cadangan',
+    btn_import_excel:'📊 Impor Excel', btn_add:'＋ Tambah',
+    st_market:'Pasar', st_charts:'Grafik', st_holdings:'Portofolio',
+    st_closed:'Posisi Ditutup', st_tx:'Riwayat Transaksi',
+    lbl_cost:'Total Modal', sub_cost:'Total pembelian',
+    lbl_value:'Nilai Pasar', lbl_pnl:'Total L/R',
+    lbl_realized:'L/R Terealisasi', lbl_coins:'Jumlah Koin',
+    chart_alloc:'Alokasi', chart_pnl:'L/R Belum Terealisasi',
+    th_coin:'Koin', th_qty:'Jumlah', th_avg:'Harga Rata-rata',
+    th_price:'Harga Saat Ini', th_value:'Nilai',
+    th_upnl:'L/R Belum Terealisasi', th_pct:'L/R %', th_realized:'Terealisasi',
+    th_c_coin:'Koin', th_c_sold:'Terjual', th_c_avg:'Harga Rata-rata', th_c_realized:'L/R Terealisasi',
+    empty:'Belum ada aset<br>Impor Excel atau tambah manual',
+    modal_title:'Tambah Transaksi', modal_coin:'Cari Koin',
+    modal_date:'Tanggal', modal_type:'Jenis', modal_qty:'Jumlah', modal_note:'Catatan (opsional)',
+    opt_buy:'Beli', opt_sell:'Jual', btn_cancel:'Batal', btn_save:'Simpan',
+    btn_buy:'+Beli', btn_sell:'−Jual', btn_delete:'Hapus',
+    status_live:'Langsung', status_updating:'Memperbarui…', status_init:'Menginisialisasi…', status_error:'Gagal mengambil data',
+    loading:'Memuat…', waiting:'Menunggu harga',
+    locked_profit:'Keuntungan terkunci', locked_loss:'Kerugian terkunci', from_sells:'Riwayat penjualan',
+    tx_count:n=>`${n} transaksi`, realized_tag:'Terealisasi', market_time:t=>`Diperbarui ${t}`,
+    buy_price:'Harga Beli (USD)', sell_price:'Harga Jual (USD)',
+    total_cost:'Total Modal (USD)', proceeds:'Hasil Penjualan (USD)', calc_hint:'Dihitung otomatis: harga × jumlah',
+  },
+  ar: {
+    tagline:'تتبع كل مركز · يدعم المحافظ الباردة',
+    btn_export:'↓ تصدير', btn_import_backup:'↑ استيراد نسخة احتياطية',
+    btn_import_excel:'📊 استيراد Excel', btn_add:'＋ إضافة',
+    st_market:'السوق', st_charts:'الرسوم البيانية', st_holdings:'المحفظة',
+    st_closed:'المراكز المغلقة', st_tx:'سجل المعاملات',
+    lbl_cost:'إجمالي التكلفة', sub_cost:'إجمالي المشتريات',
+    lbl_value:'القيمة السوقية', lbl_pnl:'إجمالي الأرباح',
+    lbl_realized:'الأرباح المحققة', lbl_coins:'العملات المحتفظ بها',
+    chart_alloc:'التوزيع', chart_pnl:'الأرباح غير المحققة',
+    th_coin:'العملة', th_qty:'الكمية', th_avg:'متوسط التكلفة',
+    th_price:'السعر الحالي', th_value:'القيمة',
+    th_upnl:'ر/خ غير محقق', th_pct:'نسبة الربح', th_realized:'محقق',
+    th_c_coin:'العملة', th_c_sold:'المباع', th_c_avg:'متوسط التكلفة', th_c_realized:'الأرباح المحققة',
+    empty:'لا توجد أصول<br>استورد Excel أو أضف يدوياً',
+    modal_title:'إضافة معاملة', modal_coin:'البحث عن عملة',
+    modal_date:'التاريخ', modal_type:'النوع', modal_qty:'الكمية', modal_note:'ملاحظة (اختياري)',
+    opt_buy:'شراء', opt_sell:'بيع', btn_cancel:'إلغاء', btn_save:'حفظ',
+    btn_buy:'+شراء', btn_sell:'−بيع', btn_delete:'حذف',
+    status_live:'مباشر', status_updating:'جاري التحديث…', status_init:'جاري التهيئة…', status_error:'فشل في جلب البيانات',
+    loading:'جاري التحميل…', waiting:'في انتظار الأسعار',
+    locked_profit:'ربح محقق', locked_loss:'خسارة محققة', from_sells:'سجل المبيعات',
+    tx_count:n=>`${n} معاملات`, realized_tag:'محقق', market_time:t=>`تم التحديث ${t}`,
+    buy_price:'سعر الشراء (USD)', sell_price:'سعر البيع (USD)',
+    total_cost:'إجمالي التكلفة (USD)', proceeds:'عائد البيع (USD)', calc_hint:'حساب تلقائي: سعر × كمية',
+  },
 };
 
 let lang = localStorage.getItem('ct_lang') || 'zh';
@@ -861,20 +1160,25 @@ function t(key, ...args) {
   const v = (LANGS[lang] || LANGS.zh)[key];
   return typeof v === 'function' ? v(...args) : (v !== undefined ? v : key);
 }
-function toggleLang() {
-  lang = lang === 'zh' ? 'en' : 'zh';
+function changeLang(newLang) {
+  if (!LANGS[newLang]) return;
+  lang = newLang;
   localStorage.setItem('ct_lang', lang);
   applyLang();
 }
 function applyLang() {
   const s = (id, val, prop = 'textContent') => { const el = document.getElementById(id); if (el) el[prop] = val; };
+  // RTL support (Arabic)
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  // Sync select
+  const sel = document.getElementById('lang-select');
+  if (sel) sel.value = lang;
   // Top bar
   document.querySelector('.logo-text .tagline').textContent = t('tagline');
   s('btn-export', t('btn_export'));
   s('btn-import-backup', t('btn_import_backup'));
   s('btn-import-excel', t('btn_import_excel'));
   s('btn-add', t('btn_add'));
-  s('lang-btn', lang === 'zh' ? 'EN' : '中文');
   // Section titles
   s('st-market', t('st_market')); s('st-charts', t('st_charts'));
   s('st-holdings', t('st_holdings')); s('st-closed', t('st_closed')); s('st-tx', t('st_tx'));
