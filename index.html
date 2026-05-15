@@ -152,6 +152,11 @@ body {
 @media (max-width: 600px) { .summary-row { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 720px) { .market-grid { grid-template-columns: repeat(3,1fr); } }
 
+/* ── Scrollable tables ── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tx-inner { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { min-width: 560px; }
+
 .stat-card {
   background: var(--card2); border: 1px solid var(--border);
   border-radius: var(--r); padding: 18px 20px;
@@ -404,6 +409,67 @@ html.light .logo-text .name {
   background: linear-gradient(90deg,#4f46e5,#7c3aed);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
+
+/* ════════════════════════════════════════
+   MOBILE RESPONSIVE
+════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .app { padding: 16px 14px; }
+
+  /* Top bar: stack buttons below logo */
+  .top-bar { flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 16px; margin-bottom: 20px; }
+  .btn-group { justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
+  .btn { padding: 7px 12px; font-size: 12px; }
+  .logo-text .name { font-size: 17px; }
+  .logo-text .tagline { font-size: 10px; }
+
+  /* Summary: 2 cols */
+  .summary-row { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+  .stat-card { padding: 14px 15px; }
+  .stat-card .val { font-size: 20px; letter-spacing: -.3px; }
+  .stat-card .lbl { font-size: 10px; }
+  .stat-card .sub { font-size: 10px; }
+
+  /* Market grid: 2 cols */
+  .market-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .market-card { padding: 11px 12px; }
+  .mc-price { font-size: 13px; }
+
+  /* Charts: tab row wraps */
+  .chart-section .section-header { flex-wrap: wrap; gap: 8px; }
+  .chart-card { padding: 14px 14px; }
+
+  /* Section headers */
+  .section-header { margin-bottom: 10px; }
+  .section-title { font-size: 10px; }
+
+  /* Tables: already min-width + scroll, just tighten cells */
+  thead th { padding: 9px 12px; font-size: 10px; }
+  tbody td { padding: 11px 12px; font-size: 12px; }
+
+  /* TX accordion */
+  .tx-section details summary { padding: 10px 14px; font-size: 12px; }
+
+  /* Modal */
+  .modal { padding: 20px 16px; }
+  .modal h2 { font-size: 15px; margin-bottom: 16px; }
+  .field-row-2 { grid-template-columns: 1fr !important; gap: 0 !important; }
+  .col-map { grid-template-columns: 1fr; }
+  .modal-footer { gap: 6px; }
+
+  /* Chart legend below on mobile */
+  .chart-wrap canvas { max-height: 240px; }
+}
+
+@media (max-width: 420px) {
+  .app { padding: 12px 10px; }
+  .btn { padding: 6px 10px; font-size: 11px; }
+  .summary-row { gap: 6px; }
+  .stat-card .val { font-size: 17px; }
+  .market-grid { grid-template-columns: repeat(2, 1fr); }
+  /* Hide least critical buttons on tiny screens */
+  #btn-export, #btn-import-backup { display: none; }
+}
 </style>
 </head>
 <body>
@@ -561,7 +627,7 @@ html.light .logo-text .name {
       </div>
       <div class="hint" id="selected-coin-hint" style="margin-top:5px"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="field-row-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field"><label id="modal-lbl-date">日期</label><input type="date" id="f-date"></div>
       <div class="field">
         <label id="modal-lbl-type">类型</label>
@@ -571,7 +637,7 @@ html.light .logo-text .name {
         </select>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="field-row-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field">
         <label id="f-price-label">买入单价 (USD)</label>
         <input type="number" id="f-price" placeholder="0.00" step="any" min="0" oninput="calcTotal()">
@@ -2054,7 +2120,7 @@ function renderAllocChart(holdings) {
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '62%',
       plugins: {
-        legend: { position: 'right', labels: { color: c.text, font: { size: 12, family: '-apple-system,sans-serif' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
+        legend: { position: window.innerWidth < 600 ? 'bottom' : 'right', labels: { color: c.text, font: { size: 12, family: '-apple-system,sans-serif' }, padding: 14, boxWidth: 12, boxHeight: 12 } },
         tooltip: { callbacks: { label: ctx => { const pct = total > 0 ? (ctx.raw / total * 100).toFixed(1) : 0; return `  $${ctx.raw.toLocaleString('en-US',{maximumFractionDigits:2})}  (${pct}%)`; } } }
       }
     }
