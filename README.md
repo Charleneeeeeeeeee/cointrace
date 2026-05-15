@@ -33,7 +33,7 @@
 
 **方法二：在线访问**
 
-👉 [cointrace.pages.dev](https://cointrace.pages.dev) *(即将上线)*
+👉 [charleneeeeeeeeee.github.io/cointrace](https://charleneeeeeeeeee.github.io/cointrace)
 
 ---
 
